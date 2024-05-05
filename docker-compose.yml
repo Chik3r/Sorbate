@@ -4,3 +4,9 @@
     build:
       context: .
       dockerfile: Sorbate.DiscordBot/Dockerfile
+
+  sorbate.storage:
+    image: sorbate.storage
+    build:
+      context: .
+      dockerfile: Sorbate.Storage/Dockerfile
