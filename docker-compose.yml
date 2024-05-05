@@ -1,0 +1,6 @@
+﻿services:
+  sorbate.discordbot:
+    image: sorbate.discordbot
+    build:
+      context: .
+      dockerfile: Sorbate.DiscordBot/Dockerfile
