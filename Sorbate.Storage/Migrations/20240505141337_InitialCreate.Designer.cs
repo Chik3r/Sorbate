@@ -11,7 +11,7 @@ using Sorbate.Storage.Models;
 namespace Sorbate.Storage.Migrations
 {
     [DbContext(typeof(StorageContext))]
-    [Migration("20240505130024_InitialCreate")]
+    [Migration("20240505141337_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -26,12 +26,14 @@ namespace Sorbate.Storage.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ModName")
+                    b.Property<string>("InternalModName")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ModVersion")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

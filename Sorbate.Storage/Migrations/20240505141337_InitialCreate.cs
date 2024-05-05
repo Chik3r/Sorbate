@@ -16,8 +16,8 @@ namespace Sorbate.Storage.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ModName = table.Column<string>(type: "TEXT", nullable: false),
-                    ModVersion = table.Column<string>(type: "TEXT", nullable: false)
+                    InternalModName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    ModVersion = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {

@@ -14,4 +14,8 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Sorbate.Storage\Sorbate.Storage.csproj" />
+  </ItemGroup>
+
 </Project>
