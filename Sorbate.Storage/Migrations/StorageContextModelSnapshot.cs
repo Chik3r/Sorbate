@@ -25,6 +25,11 @@ namespace Sorbate.Storage.Migrations
 
                     b.Property<string>("InternalModName")
                         .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModLoaderVersion")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
