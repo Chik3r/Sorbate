@@ -41,6 +41,7 @@ public class DiscordClient {
             if (unknownGatewayObject.SequenceNumber.HasValue)
                 _lastSequenceNumber = unknownGatewayObject.SequenceNumber;
 
+            Console.WriteLine("Got message with opcode " + unknownGatewayObject.OpCode);
             switch (unknownGatewayObject.OpCode) {
                 case GatewayOpCode.Dispatch:
                     HandleDispatchedEvent(unknownGatewayObject);
@@ -88,6 +89,8 @@ public class DiscordClient {
         if (data is null) throw new ArgumentException("Data was null", nameof(gatewayObject));
 
         if (_heartbeatTimer is null) {
+            SendHeartbeat();
+            
             _heartbeatTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(data.HeartbeatInterval));
             Task.Factory.StartNew(async () => {
                 while (!_cts.Token.IsCancellationRequested) {

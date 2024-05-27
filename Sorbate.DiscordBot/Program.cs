@@ -5,15 +5,15 @@ namespace Sorbate.DiscordBot;
 
 class Program {
     static async Task Main(string[] args) {
-        byte[] randomData = new byte[1024];
-        Random.Shared.NextBytes(randomData);
-        using MemoryStream stream = new(randomData);
-
-        await StorageHandler.Instance.StoreFile(stream, new ModFile {
-            InternalModName = "MyMod",
-            ModVersion = "1.0.0",
-            ModLoaderVersion = "0.11.7.5"
-        }, "C:/tmp/sorbate/mods/");
+        // byte[] randomData = new byte[1024];
+        // Random.Shared.NextBytes(randomData);
+        // using MemoryStream stream = new(randomData);
+        //
+        // await StorageHandler.Instance.StoreFile(stream, new ModFile {
+        //     InternalModName = "MyMod",
+        //     ModVersion = "1.0.0",
+        //     ModLoaderVersion = "0.11.7.5"
+        // }, "C:/tmp/sorbate/mods/");
         
         
         // using StorageContext db = new();
@@ -34,5 +34,11 @@ class Program {
         // // Console.WriteLine("Delete the file");
         // // db.Remove(file);
         // // db.SaveChanges();
+
+        DiscordClient discordClient = new();
+        discordClient.Start();
+        
+        ManualResetEvent exitEvent = new(false);
+        exitEvent.WaitOne();
     }
 }
