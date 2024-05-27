@@ -8,7 +8,7 @@ public record EventIdentify(
     [property: JsonPropertyName("properties")]
     ConnectionProperties ConnectionProperties,
     [property: JsonPropertyName("intents")]
-    int GatewayIntents,
+    GatewayIntent GatewayIntents,
     [property: JsonPropertyName("compress")]
     bool PacketCompressionSupported = false,
     [property: JsonPropertyName("large_threshold")]
