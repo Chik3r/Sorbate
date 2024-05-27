@@ -18,4 +18,8 @@
     <ProjectReference Include="..\Sorbate.Storage\Sorbate.Storage.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Websocket.Client" Version="5.1.1" />
+  </ItemGroup>
+
 </Project>
