@@ -1,4 +1,5 @@
-﻿using System.Reactive.Linq;
+﻿using System.Net.Http.Headers;
+using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -23,11 +24,50 @@ public class DiscordClient {
         _websocketClient.MessageReceived
             .Where(x => x.Text != null && x.Text.StartsWith('{'))
             .Subscribe(OnMessage);
-        _websocketClient.Start();
+        // _websocketClient.Start();
+
+        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", Secrets.AuthToken);
     }
 
     public void Cancel() {
         _cts.Cancel();
+    }
+
+    public async IAsyncEnumerable<Attachment> SearchForFiles() {
+        // https://discord.com/api/v9/guilds/103110554649894912/messages/search?channel_id=284077567986761730&has=file&sort_by=timestamp&sort_order=asc&offset=0
+
+        int offset = 0;
+        int totalNumMessages = int.MaxValue;
+
+        while (offset < totalNumMessages) {
+            string url = Constants.SearchUri + $"&offset={offset}"; 
+            HttpResponseMessage result = await _httpClient.GetAsync(url, _cts.Token);
+            
+            if (!result.IsSuccessStatusCode)
+                yield break;
+
+            SearchResults? results = null;
+            try {
+                results = JsonSerializer.Deserialize<SearchResults>(await result.Content.ReadAsStreamAsync());
+            }
+            catch (Exception e) {
+                Console.WriteLine("Error deserializing search results\n" + e);
+                yield break;
+            }
+            
+            if (results is null)
+                yield break;
+                
+            totalNumMessages = results!.TotalResults;
+            
+            foreach (Message message in results.Messages.SelectMany(x => x)) {
+                foreach (Attachment attachment in message.Attachments) {
+                    yield return attachment;
+                }
+            }
+
+            offset += results.Messages.Length;
+        }
     }
 
     private void OnMessage(ResponseMessage message) {
@@ -76,7 +116,7 @@ public class DiscordClient {
     private void HandleDispatchedEvent(GatewayObject<JsonObject> gatewayObject) {
         switch (gatewayObject.EventName) {
             case "MESSAGE_CREATE":
-                // TODO: Handle
+                // TODO: Handle, check attachments for .tmod files
                 break;
             default:
                 // Unknown event

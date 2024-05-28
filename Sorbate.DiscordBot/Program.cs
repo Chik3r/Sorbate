@@ -1,4 +1,5 @@
-﻿using Sorbate.Storage;
+﻿using Sorbate.DiscordBot.Data;
+using Sorbate.Storage;
 using Sorbate.Storage.Models;
 
 namespace Sorbate.DiscordBot;
@@ -37,6 +38,10 @@ class Program {
 
         DiscordClient discordClient = new();
         discordClient.Start();
+
+        await foreach (Attachment attachment in discordClient.SearchForFiles()) {
+            Console.WriteLine($"Process mod file: {attachment.Filename} with url '{attachment.Url}'");    
+        }
         
         ManualResetEvent exitEvent = new(false);
         exitEvent.WaitOne();

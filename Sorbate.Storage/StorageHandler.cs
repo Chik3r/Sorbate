@@ -3,6 +3,9 @@ using Tomat.FNB.TMOD;
 
 namespace Sorbate.Storage;
 
+// TODO
+//  - Store the SHA1 hash of the tmod file, prevents repeated files by checking if they are already stored
+
 public class StorageHandler {
     public static StorageHandler Instance { get; } = new();
     
