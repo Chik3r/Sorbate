@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
 using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -33,16 +33,20 @@ public class DiscordClient {
         _cts.Cancel();
     }
 
-    public async IAsyncEnumerable<Attachment> SearchForFiles() {
-        // https://discord.com/api/v9/guilds/103110554649894912/messages/search?channel_id=284077567986761730&has=file&sort_by=timestamp&sort_order=asc&offset=0
-
-        int offset = 0;
+    public async IAsyncEnumerable<Attachment> SearchForFiles(int initialOffset = 0) {
+        int offset = initialOffset;
         int totalNumMessages = int.MaxValue;
 
         while (offset < totalNumMessages) {
             string url = Constants.SearchUri + $"&offset={offset}"; 
             HttpResponseMessage result = await _httpClient.GetAsync(url, _cts.Token);
             
+            if (result.StatusCode == HttpStatusCode.TooManyRequests && result.Headers.RetryAfter?.Delta.HasValue == true) {
+                // wait and try again
+                await Task.Delay(result.Headers.RetryAfter.Delta.Value, _cts.Token);
+                result = await _httpClient.GetAsync(url, _cts.Token);
+            }
+
             if (!result.IsSuccessStatusCode)
                 yield break;
 
