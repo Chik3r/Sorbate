@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic;
-using Sorbate.Storage.Models;
+﻿using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
 
 namespace Sorbate.Storage;
@@ -7,6 +6,7 @@ namespace Sorbate.Storage;
 // TODO
 // - Store the SHA1 hash of the tmod file, prevents repeated files by checking if they are already stored
 // - logging
+// - store the author of the mod
 
 public class StorageHandler {
     private const string MOD_FILE_DIRECTORY = "tmod_files";
@@ -26,6 +26,7 @@ public class StorageHandler {
         string filePath = Path.Combine(outputDirectory, fileName);
 
         await using FileStream fileStream = File.Create(filePath);
+        fileData.Position = 0;
         await fileData.CopyToAsync(fileStream);
 
         await using StorageContext db = new();
@@ -51,7 +52,13 @@ public class StorageHandler {
     }
 
     public async Task<Stream> DownloadModFile(string url) {
-        // await _client.dowloadfileorsomething;
-        throw new NotImplementedException();
+        await using Stream stream = await _client.GetStreamAsync(url);
+        
+        // Copy to a memory stream to ensure it is fully downloaded
+        MemoryStream memoryStream = new();
+        await stream.CopyToAsync(memoryStream);
+        memoryStream.Position = 0;
+
+        return memoryStream;
     }
 }

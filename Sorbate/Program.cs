@@ -10,6 +10,7 @@ class Program {
         HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
         builder.Services.AddLogging();
+        builder.Services.AddHttpClient();
         builder.Services.AddHostedService<DiscordService>();
         builder.Services.AddSingleton<StorageHandler>();
 
