@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sorbate.DiscordBot;
-using Sorbate.Storage.Models;
+using Sorbate.Storage;
 
 namespace Sorbate;
 
@@ -11,6 +11,7 @@ class Program {
 
         builder.Services.AddLogging();
         builder.Services.AddHostedService<DiscordService>();
+        builder.Services.AddSingleton<StorageHandler>();
 
         using IHost host = builder.Build();
         await host.RunAsync();

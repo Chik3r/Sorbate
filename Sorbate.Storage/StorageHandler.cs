@@ -1,13 +1,23 @@
-﻿using Sorbate.Storage.Models;
+﻿using Microsoft.VisualBasic;
+using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
 
 namespace Sorbate.Storage;
 
 // TODO
-//  - Store the SHA1 hash of the tmod file, prevents repeated files by checking if they are already stored
+// - Store the SHA1 hash of the tmod file, prevents repeated files by checking if they are already stored
+// - logging
 
-public static class StorageHandler {
-    public static async Task StoreFile(Stream fileData, ModFile fileInfo, string outputDirectory) {
+public class StorageHandler {
+    private const string MOD_FILE_DIRECTORY = "tmod_files";
+    
+    private readonly HttpClient _client;
+
+    public StorageHandler(HttpClient client) {
+        _client = client;
+    }
+    
+    public async Task StoreFile(Stream fileData, ModFile fileInfo, string outputDirectory) {
         Directory.CreateDirectory(outputDirectory);
 
         Guid fileGuid = Guid.NewGuid();
@@ -24,7 +34,9 @@ public static class StorageHandler {
         await db.SaveChangesAsync();
     }
 
-    public static async Task StoreTmodFile(Stream modFile, string outputDirectory) {
+    public async Task StoreModFile(Stream modFile) => await StoreModFile(modFile, MOD_FILE_DIRECTORY);
+
+    public async Task StoreModFile(Stream modFile, string outputDirectory) {
         if (!TmodFile.TryReadFromStream(modFile, out TmodFile? tmodFile))
             throw new Exception("Unable to read .tmod file from stream");
 
@@ -36,5 +48,10 @@ public static class StorageHandler {
         };
         
         await StoreFile(modFile, modInfo, outputDirectory);
+    }
+
+    public async Task<Stream> DownloadModFile(string url) {
+        // await _client.dowloadfileorsomething;
+        throw new NotImplementedException();
     }
 }
