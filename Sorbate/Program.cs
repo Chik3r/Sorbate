@@ -11,7 +11,6 @@ class Program {
 
         builder.Services.AddLogging();
         builder.Services.AddHostedService<DiscordService>();
-        builder.Services.AddDbContext<StorageContext>();
 
         using IHost host = builder.Build();
         await host.RunAsync();

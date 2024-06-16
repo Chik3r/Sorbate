@@ -24,13 +24,14 @@ public class DiscordClient {
         _websocketClient.MessageReceived
             .Where(x => x.Text != null && x.Text.StartsWith('{'))
             .Subscribe(OnMessage);
-        // _websocketClient.Start();
+        _websocketClient.Start();
 
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", Secrets.AuthToken);
     }
 
-    public void Cancel() {
+    public void Stop() {
         _cts.Cancel();
+        _websocketClient.Dispose();
     }
 
     public async IAsyncEnumerable<Attachment> SearchForFiles(int initialOffset = 0) {
