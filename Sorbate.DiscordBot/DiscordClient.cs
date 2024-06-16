@@ -11,12 +11,16 @@ namespace Sorbate.DiscordBot;
 
 public class DiscordClient {
     private PeriodicTimer? _heartbeatTimer;
+    private readonly HttpClient _httpClient;
     private readonly WebsocketClient _websocketClient = new(new Uri(Constants.DiscordGatewayUri));
     private int? _lastSequenceNumber = null;
-    private HttpClient _httpClient = new();
     private readonly CancellationTokenSource _cts = new();
 
     private readonly JsonSerializerOptions _serializerOptions = new();
+
+    public DiscordClient(HttpClient client) {
+        _httpClient = client;
+    }
 
     public void Start() {
         _serializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
