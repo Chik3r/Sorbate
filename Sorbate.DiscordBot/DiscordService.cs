@@ -25,7 +25,7 @@ public class DiscordService : BackgroundService {
             // TODO: Ignore file if over a certain size (e.g. 300MB) and warn
             
             // Store the attachment
-            Stream file = await _storageHandler.DownloadModFile(attachment.Url);
+            await using Stream file = await _storageHandler.DownloadModFile(attachment.Url);
             await _storageHandler.StoreModFile(file);
         }
         
