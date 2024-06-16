@@ -9,3 +9,8 @@
 
 volumes:
   app-data:
+  sorbate:
+    image: sorbate
+    build:
+      context: .
+      dockerfile: Sorbate/Dockerfile

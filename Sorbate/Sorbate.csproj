@@ -15,12 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Sorbate.Storage\Sorbate.Storage.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Websocket.Client" Version="5.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <ProjectReference Include="..\Sorbate.DiscordBot\Sorbate.DiscordBot.csproj" />
+    <ProjectReference Include="..\Sorbate.Storage\Sorbate.Storage.csproj" />
   </ItemGroup>
 
 </Project>
