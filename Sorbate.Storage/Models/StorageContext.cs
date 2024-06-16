@@ -2,7 +2,7 @@
 
 namespace Sorbate.Storage.Models;
 
-public sealed class StorageContext : DbContext {
+internal sealed class StorageContext : DbContext {
     public DbSet<ModFile> Files { get; set; }
     
     public string DbPath { get; }
