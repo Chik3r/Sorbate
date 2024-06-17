@@ -6,6 +6,12 @@
       dockerfile: Sorbate.DiscordBot/Dockerfile
     volumes:
       - app-data:/app
+  db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: L6NFJZ#KmwUkFm
 
 volumes:
   app-data:
