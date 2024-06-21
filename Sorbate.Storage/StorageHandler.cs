@@ -1,4 +1,5 @@
-﻿using Sorbate.Storage.Models;
+﻿using Sorbate.Storage.Analyzers;
+using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
 
 namespace Sorbate.Storage;
@@ -37,8 +38,8 @@ public class StorageHandler {
 
     public async Task StoreModFile(Stream modFile) => await StoreModFile(modFile, MOD_FILE_DIRECTORY);
 
-    public async Task StoreModFile(Stream modFile, string outputDirectory) {
-        if (!TmodFile.TryReadFromStream(modFile, out TmodFile? tmodFile))
+    public async Task StoreModFile(Stream modFileStream, string outputDirectory) {
+        if (!TmodFile.TryReadFromStream(modFileStream, out TmodFile? tmodFile))
             throw new Exception("Unable to read .tmod file from stream");
 
         ModFile modInfo = new() {
@@ -47,8 +48,10 @@ public class StorageHandler {
             ModVersion = tmodFile.Version,
             ModLoaderVersion = tmodFile.ModLoaderVersion
         };
+
+        modInfo = await ModAnalyzer.AnalyzeMod(modFileStream, modInfo, tmodFile);
         
-        await StoreFile(modFile, modInfo, outputDirectory);
+        await StoreFile(modFileStream, modInfo, outputDirectory);
     }
 
     public async Task<Stream> DownloadModFile(string url) {
