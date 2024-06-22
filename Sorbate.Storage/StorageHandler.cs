@@ -23,7 +23,7 @@ public class StorageHandler {
 
         Guid fileGuid = Guid.NewGuid();
         fileInfo.Id = fileGuid;
-        string fileName = Path.ChangeExtension(fileGuid.ToString(), ".tmod");
+        string fileName = fileGuid.ToString();
         string filePath = Path.Combine(outputDirectory, fileName);
 
         await using FileStream fileStream = File.Create(filePath);
