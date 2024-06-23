@@ -6,6 +6,8 @@
     build:
       context: .
       dockerfile: Sorbate/Dockerfile
+    depends_on:
+      - db
     environment:
       Discord__AuthToken: ${DISCORD_TOKEN}
       ConnectionStrings__DefaultConnection: Host=localhost;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
@@ -18,8 +20,8 @@
     shm_size: 128mb
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - 5432:5432
     env_file:
       - path: .env
         required: true
+    ports:
+      - 5432:5432
