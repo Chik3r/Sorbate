@@ -22,8 +22,14 @@ public class StorageHandler {
         _analyzer = analyzer;
         _dbFactory = dbFactory;
     }
-    
+
     public async Task StoreFile(Stream fileData, ModFile fileInfo, string outputDirectory) {
+        await using StorageContext db = await _dbFactory.CreateDbContextAsync();
+        if (db.Files.Any(x => x.FileHash == fileInfo.FileHash)) {
+            // File already exists
+            return;
+        }
+
         Directory.CreateDirectory(outputDirectory);
 
         Guid fileGuid = Guid.NewGuid();
@@ -35,8 +41,6 @@ public class StorageHandler {
         fileData.Position = 0;
         await fileData.CopyToAsync(fileStream);
 
-        await using StorageContext db = await _dbFactory.CreateDbContextAsync();
-        
         db.Files.Add(fileInfo);
         await db.SaveChangesAsync();
     }
