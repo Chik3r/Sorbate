@@ -10,16 +10,17 @@ using Websocket.Client;
 namespace Sorbate.DiscordBot;
 
 public class DiscordClient {
-    private PeriodicTimer? _heartbeatTimer;
     private readonly HttpClient _httpClient;
     private readonly WebsocketClient _websocketClient = new(new Uri(Constants.DiscordGatewayUri));
-    private int? _lastSequenceNumber = null;
     private readonly CancellationTokenSource _cts = new();
-
     private readonly JsonSerializerOptions _serializerOptions = new();
+    private PeriodicTimer? _heartbeatTimer;
+    private int? _lastSequenceNumber = null;
+    private readonly string _authToken;
 
-    public DiscordClient(HttpClient client) {
+    public DiscordClient(HttpClient client, string authToken) {
         _httpClient = client;
+        _authToken = authToken;
     }
 
     public void Start() {
@@ -30,7 +31,7 @@ public class DiscordClient {
             .Subscribe(OnMessage);
         _websocketClient.Start();
 
-        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", Secrets.AuthToken);
+        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", _authToken);
     }
 
     public void Stop() {
@@ -53,6 +54,7 @@ public class DiscordClient {
             }
 
             if (!result.IsSuccessStatusCode)
+                // TODO: Log
                 yield break;
 
             SearchResults? results = null;
@@ -161,7 +163,7 @@ public class DiscordClient {
     }
 
     private void SendIdentify() {
-        EventIdentify identify = new(Secrets.AuthToken, ConnectionProperties.Default,
+        EventIdentify identify = new(_authToken, ConnectionProperties.Default,
             GatewayIntent.GuildMessages | GatewayIntent.MessageContent);
 
         GatewayObject<EventIdentify> gatewayObj = new(GatewayOpCode.Identify, identify);

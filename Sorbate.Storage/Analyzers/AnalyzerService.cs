@@ -1,4 +1,5 @@
 ﻿using LinqKit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sorbate.Storage.Models;
@@ -9,9 +10,11 @@ namespace Sorbate.Storage.Analyzers;
 public class AnalyzerService : BackgroundService {
     private readonly List<ModAnalyzer> _analyzers = [];
     private readonly ILogger _logger;
+    private readonly IDbContextFactory<StorageContext> _dbFactory;
 
-    public AnalyzerService(ILogger<AnalyzerService> logger) {
+    public AnalyzerService(ILogger<AnalyzerService> logger, IDbContextFactory<StorageContext> dbFactory) {
         _logger = logger;
+        _dbFactory = dbFactory;
         
         foreach (Type type in typeof(ModAnalyzer).Assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(ModAnalyzer)))) {
             ModAnalyzer analyzer = (ModAnalyzer) Activator.CreateInstance(type)!;
@@ -31,7 +34,7 @@ public class AnalyzerService : BackgroundService {
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-        await using StorageContext db = new();
+        await using StorageContext db = await _dbFactory.CreateDbContextAsync(stoppingToken);
 
         // Build a sequence of where queries that are OR'ed together
         ExpressionStarter<ModFile>? predicate = PredicateBuilder.New<ModFile>(false);

@@ -1,4 +1,5 @@
-﻿using Sorbate.Storage.Analyzers;
+﻿using Microsoft.EntityFrameworkCore;
+using Sorbate.Storage.Analyzers;
 using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
 
@@ -14,10 +15,12 @@ public class StorageHandler {
     
     private readonly HttpClient _client;
     private readonly AnalyzerService _analyzer;
+    private readonly IDbContextFactory<StorageContext> _dbFactory;
 
-    public StorageHandler(HttpClient client, AnalyzerService analyzer) {
+    public StorageHandler(HttpClient client, AnalyzerService analyzer, IDbContextFactory<StorageContext> dbFactory) {
         _client = client;
         _analyzer = analyzer;
+        _dbFactory = dbFactory;
     }
     
     public async Task StoreFile(Stream fileData, ModFile fileInfo, string outputDirectory) {
@@ -32,7 +35,7 @@ public class StorageHandler {
         fileData.Position = 0;
         await fileData.CopyToAsync(fileStream);
 
-        await using StorageContext db = new();
+        await using StorageContext db = await _dbFactory.CreateDbContextAsync();
         
         db.Files.Add(fileInfo);
         await db.SaveChangesAsync();

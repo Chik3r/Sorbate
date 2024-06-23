@@ -1,22 +1,23 @@
 ﻿services:
-  sorbate.discordbot:
-    image: sorbate.discordbot
+  sorbate:
+    image: sorbate
+    tty: true
+    stdin_open: true
     build:
       context: .
-      dockerfile: Sorbate.DiscordBot/Dockerfile
-    volumes:
-      - app-data:/app
+      dockerfile: Sorbate/Dockerfile
+    environment:
+      Discord__AuthToken: ${DISCORD_TOKEN}
+      ConnectionStrings__DefaultConnection: Host=localhost;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
+    env_file:
+      - path: .env
+        required: true
   db:
     image: postgres
     restart: always
     shm_size: 128mb
     environment:
-      POSTGRES_PASSWORD: L6NFJZ#KmwUkFm
-
-volumes:
-  app-data:
-  sorbate:
-    image: sorbate
-    build:
-      context: .
-      dockerfile: Sorbate/Dockerfile
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - path: .env
+        required: true
