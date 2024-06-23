@@ -11,14 +11,7 @@ namespace Sorbate;
 
 class Program {
     private static async Task Main(string[] args) {
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder();
-
-        builder.Configuration
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", false, false)
-            .AddUserSecrets(typeof(Program).Assembly)
-            .AddEnvironmentVariables()
-            .AddCommandLine(args);
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
         builder.Services.AddLogging();
         builder.Services.AddHttpClient();
