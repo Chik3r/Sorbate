@@ -10,7 +10,7 @@
       - db
     environment:
       Discord__AuthToken: ${DISCORD_TOKEN}
-      ConnectionStrings__DefaultConnection: Host=localhost;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
+      ConnectionStrings__DefaultConnection: Host=db;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
     env_file:
       - path: .env
         required: true
