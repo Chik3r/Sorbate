@@ -24,4 +24,11 @@
     <ProjectReference Include="..\Sorbate.Storage\Sorbate.Storage.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="appsettings.json" />
+    <EmbeddedResource Include="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>
