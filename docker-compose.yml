@@ -15,7 +15,10 @@
       - path: .env
         required: true
     volumes:
-      - mod-files:/app/tmod_files
+      - type: bind
+        source: /mnt/extra-storage/tmod_files/
+        target: /app/tmod_files/
+    user: "1005:1006"
   db:
     image: postgres
     restart: always
@@ -27,6 +30,3 @@
         required: true
     ports:
       - 5432:5432
-        
-volumes:
-  mod-files:
