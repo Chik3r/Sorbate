@@ -1,4 +1,5 @@
-﻿using Sorbate.Storage.Models;
+﻿using LinqKit;
+using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
 
 namespace Sorbate.Storage.Analyzers;
@@ -17,5 +18,6 @@ internal class HashAnalyzer : ModAnalyzer {
         return Task.FromResult(modInfo);
     }
 
-    internal override bool ShouldBeAnalyzed(ModFile modInfo) => false;
+    internal override ExpressionStarter<ModFile> BuildSearchPredicate(ExpressionStarter<ModFile> expression) =>
+        expression;
 }

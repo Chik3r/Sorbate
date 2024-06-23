@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace Sorbate.Storage.Models;
 
-[Index(nameof(FileHash), IsUnique = true)]
+[Microsoft.EntityFrameworkCore.Index(nameof(FileHash), IsUnique = true)]
 public class ModFile {
     public Guid Id { get; set; }
     

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using LinqKit;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
@@ -31,14 +32,19 @@ public class AnalyzerService : BackgroundService {
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         await using StorageContext db = new();
-        foreach (ModFile source in from f in db.Files 
-                 where ShouldAnalyze(f) 
-                 select f) {
+
+        // Build a sequence of where queries that are OR'ed together
+        ExpressionStarter<ModFile>? predicate = PredicateBuilder.New<ModFile>(false);
+        foreach (ModAnalyzer analyzer in _analyzers) predicate = analyzer.BuildSearchPredicate(predicate);
+        
+        foreach (ModFile source in db.Files.AsExpandable().Where(predicate)) {
             string path = Path.Combine(StorageHandler.ModFileDirectory, source.Id.ToString());
             await using Stream fileStream = File.OpenRead(path);
-            await AnalyzeMod(fileStream, source);
+            ModFile info = await AnalyzeMod(fileStream, source);
+            
+            db.Files.Update(info);
         }
+
+        await db.SaveChangesAsync(stoppingToken);
     }
-    
-    private bool ShouldAnalyze(ModFile modInfo) => _analyzers.Any(analyzer => analyzer.ShouldBeAnalyzed(modInfo));
 }

@@ -13,7 +13,10 @@ class Program {
         builder.Services.AddLogging();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<DiscordService>();
-        builder.Services.AddHostedService<AnalyzerService>();
+        
+        builder.Services.AddSingleton<AnalyzerService>();
+        builder.Services.AddHostedService<AnalyzerService>(provider => provider.GetService<AnalyzerService>()!);
+        
         builder.Services.AddSingleton<StorageHandler>();
 
         using IHost host = builder.Build();

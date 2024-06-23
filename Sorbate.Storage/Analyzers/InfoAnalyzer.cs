@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using LinqKit;
 using Sorbate.Storage.Models;
 using Tomat.FNB.TMOD;
 
@@ -31,5 +32,6 @@ internal class InfoAnalyzer : ModAnalyzer {
         return Task.FromResult(modInfo);
     }
 
-    internal override bool ShouldBeAnalyzed(ModFile modInfo) => modInfo.DisplayName is null || modInfo.Author is null;
+    internal override ExpressionStarter<ModFile> BuildSearchPredicate(ExpressionStarter<ModFile> expression) =>
+        expression.Or(f => f.DisplayName == null || f.Author == null);
 }
