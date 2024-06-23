@@ -10,12 +10,14 @@ namespace Sorbate.Storage;
 // - store the author of the mod
 
 public class StorageHandler {
-    private const string MOD_FILE_DIRECTORY = "tmod_files";
+    internal const string ModFileDirectory = "tmod_files";
     
     private readonly HttpClient _client;
+    private readonly AnalyzerService _analyzer;
 
-    public StorageHandler(HttpClient client) {
+    public StorageHandler(HttpClient client, AnalyzerService analyzer) {
         _client = client;
+        _analyzer = analyzer;
     }
     
     public async Task StoreFile(Stream fileData, ModFile fileInfo, string outputDirectory) {
@@ -36,7 +38,7 @@ public class StorageHandler {
         await db.SaveChangesAsync();
     }
 
-    public async Task StoreModFile(Stream modFile) => await StoreModFile(modFile, MOD_FILE_DIRECTORY);
+    public async Task StoreModFile(Stream modFile) => await StoreModFile(modFile, ModFileDirectory);
 
     public async Task StoreModFile(Stream modFileStream, string outputDirectory) {
         if (!TmodFile.TryReadFromStream(modFileStream, out TmodFile? tmodFile))
@@ -49,7 +51,7 @@ public class StorageHandler {
             ModLoaderVersion = tmodFile.ModLoaderVersion
         };
 
-        modInfo = await ModAnalyzer.AnalyzeMod(modFileStream, modInfo, tmodFile);
+        modInfo = await _analyzer.AnalyzeMod(modFileStream, modInfo, tmodFile);
         
         await StoreFile(modFileStream, modInfo, outputDirectory);
     }

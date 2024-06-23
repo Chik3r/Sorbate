@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Sorbate.Storage.Models;
@@ -25,4 +26,11 @@ public class ModFile {
     
     [MaxLength(512)]
     public string? Author { get; set; }
+    
+    [MaxLength(1024)]
+    public string? DisplayName { get; set; }
+    
+    [Column(TypeName = "text")]
+    // ReSharper disable once EntityFramework.ModelValidation.UnlimitedStringLength
+    public string? Description { get; set; }
 }

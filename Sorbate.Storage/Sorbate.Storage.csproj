@@ -13,6 +13,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.4" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <ProjectReference Include="..\fnb\src\Tomat.FNB\Tomat.FNB.csproj" />
   </ItemGroup>
 

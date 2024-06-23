@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Sorbate.DiscordBot;
 using Sorbate.Storage;
+using Sorbate.Storage.Analyzers;
 
 namespace Sorbate;
 
@@ -12,6 +13,7 @@ class Program {
         builder.Services.AddLogging();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<DiscordService>();
+        builder.Services.AddHostedService<AnalyzerService>();
         builder.Services.AddSingleton<StorageHandler>();
 
         using IHost host = builder.Build();

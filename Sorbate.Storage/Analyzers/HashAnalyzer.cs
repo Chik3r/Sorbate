@@ -3,8 +3,8 @@ using Tomat.FNB.TMOD;
 
 namespace Sorbate.Storage.Analyzers;
 
-public class HashAnalyzer : ModAnalyzer {
-    protected override Task<ModFile> AnalyzeModFile(Stream modFileStream, ModFile modInfo, TmodFile tmodFile) {
+internal class HashAnalyzer : ModAnalyzer {
+    internal override Task<ModFile> AnalyzeModFile(Stream modFileStream, ModFile modInfo, TmodFile tmodFile) {
         // Skip header (4 bytes) and version (string)
         modFileStream.Position = 4;
         BinaryReader reader = new(modFileStream);
@@ -17,7 +17,5 @@ public class HashAnalyzer : ModAnalyzer {
         return Task.FromResult(modInfo);
     }
 
-    protected override bool ShouldBeAnalyzed(ModFile modInfo) {
-        throw new NotImplementedException();
-    }
+    internal override bool ShouldBeAnalyzed(ModFile modInfo) => false;
 }
