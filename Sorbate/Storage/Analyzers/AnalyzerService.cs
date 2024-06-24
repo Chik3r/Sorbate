@@ -24,9 +24,11 @@ public class AnalyzerService : BackgroundService {
     
     public async Task<ModFile> AnalyzeMod(Stream modFileStream, ModFile modInfo, TmodFile? tmodFile = null) {
         if (tmodFile is null && !TmodFile.TryReadFromStream(modFileStream, out tmodFile)) {
-            throw new Exception("Unable to read .tmod file from stream");
+            _logger.LogWarning("Unable to read .tmod file from stream");
+            return modInfo;
         }
         
+        _logger.LogDebug("Analyzing mod with name '{ModName}'", modInfo.InternalModName);
         foreach (ModAnalyzer analyzer in _analyzers)
             modInfo = await analyzer.AnalyzeModFile(modFileStream, modInfo, tmodFile);
 
@@ -34,6 +36,7 @@ public class AnalyzerService : BackgroundService {
     }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        _logger.LogInformation("Searching for mods missing metadata");
         await using StorageContext db = await _dbFactory.CreateDbContextAsync(stoppingToken);
 
         // Build a sequence of where queries that are OR'ed together

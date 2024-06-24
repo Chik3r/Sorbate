@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Sorbate.DiscordBot.Data;
 using Sorbate.DiscordBot.Data.Events;
 using Websocket.Client;
@@ -10,6 +11,7 @@ using Websocket.Client;
 namespace Sorbate.DiscordBot;
 
 public class DiscordClient {
+    private readonly ILogger<DiscordClient> _logger;
     private readonly HttpClient _httpClient;
     private readonly WebsocketClient _websocketClient = new(new Uri(Constants.DiscordGatewayUri));
     private readonly CancellationTokenSource _cts = new();
@@ -18,20 +20,20 @@ public class DiscordClient {
     private int? _lastSequenceNumber = null;
     private readonly string _authToken;
 
-    public DiscordClient(HttpClient client, string authToken) {
+    public DiscordClient(ILogger<DiscordClient> logger, HttpClient client, string authToken) {
+        _logger = logger;
         _httpClient = client;
         _authToken = authToken;
-    }
-
-    public void Start() {
+        
+        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", _authToken);
         _serializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-
         _websocketClient.MessageReceived
             .Where(x => x.Text != null && x.Text.StartsWith('{'))
             .Subscribe(OnMessage);
-        _websocketClient.Start();
+    }
 
-        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", _authToken);
+    public void Start() {
+        _websocketClient.Start();
     }
 
     public void Stop() {
@@ -49,20 +51,26 @@ public class DiscordClient {
             
             if (result.StatusCode == HttpStatusCode.TooManyRequests && result.Headers.RetryAfter?.Delta.HasValue == true) {
                 // wait and try again
-                await Task.Delay(result.Headers.RetryAfter.Delta.Value, _cts.Token);
+                TimeSpan retryAfterDelta = result.Headers.RetryAfter.Delta.Value;
+                _logger.LogDebug("Rate limited, waiting for {RetryAfter} ms", retryAfterDelta);
+                await Task.Delay(retryAfterDelta, _cts.Token);
+
                 result = await _httpClient.GetAsync(url, _cts.Token);
             }
 
-            if (!result.IsSuccessStatusCode)
-                // TODO: Log
+            if (!result.IsSuccessStatusCode) {
+                _logger.LogError(
+                    "Failed to get search results from discord - Status code: {StatusCode} - Reason: {ReasonPhrase}",
+                    result.StatusCode, result.ReasonPhrase);
                 yield break;
+            }
 
             SearchResults? results = null;
             try {
                 results = JsonSerializer.Deserialize<SearchResults>(await result.Content.ReadAsStreamAsync());
             }
             catch (Exception e) {
-                Console.WriteLine("Error deserializing search results\n" + e);
+                _logger.LogError(e, "Error deserializing search results");
                 yield break;
             }
             
@@ -83,8 +91,8 @@ public class DiscordClient {
 
     private void OnMessage(ResponseMessage message) {
         try {
-            GatewayObject<JsonObject>? unknownGatewayObject =
-                JsonSerializer.Deserialize<GatewayObject<JsonObject>>(message.Text!);
+            GatewayObject<JsonNode>? unknownGatewayObject =
+                JsonSerializer.Deserialize<GatewayObject<JsonNode>>(message.Text!);
 
             if (unknownGatewayObject is null)
                 return;
@@ -92,7 +100,7 @@ public class DiscordClient {
             if (unknownGatewayObject.SequenceNumber.HasValue)
                 _lastSequenceNumber = unknownGatewayObject.SequenceNumber;
 
-            Console.WriteLine("Got message with opcode " + unknownGatewayObject.OpCode);
+            _logger.LogDebug("Got message with opcode {OpCode}", unknownGatewayObject.OpCode);
             switch (unknownGatewayObject.OpCode) {
                 case GatewayOpCode.Dispatch:
                     HandleDispatchedEvent(unknownGatewayObject);
@@ -120,11 +128,11 @@ public class DiscordClient {
             }
         }
         catch (Exception e) {
-            Console.WriteLine("An error occurred while processing a gateway message.\n" + e);
+            _logger.LogError(e, "An error occurred while processing a gateway message.");
         }
     }
 
-    private void HandleDispatchedEvent(GatewayObject<JsonObject> gatewayObject) {
+    private void HandleDispatchedEvent(GatewayObject<JsonNode> gatewayObject) {
         switch (gatewayObject.EventName) {
             case "MESSAGE_CREATE":
                 // TODO: Handle, check attachments for .tmod files
@@ -135,7 +143,7 @@ public class DiscordClient {
         }
     }
 
-    private void HandleHello(GatewayObject<JsonObject> gatewayObject) {
+    private void HandleHello(GatewayObject<JsonNode> gatewayObject) {
         EventHello? data = gatewayObject.Data!.Deserialize<EventHello>();
         if (data is null) throw new ArgumentException("Data was null", nameof(gatewayObject));
 
@@ -159,7 +167,7 @@ public class DiscordClient {
         string msg = $"{{\"op\":1,\"d\":{seqNumber}}}";
         _websocketClient.Send(msg);
 
-        Console.WriteLine("Sent heartbeat");
+        _logger.LogDebug("Sent heartbeat");
     }
 
     private void SendIdentify() {
@@ -169,7 +177,7 @@ public class DiscordClient {
         GatewayObject<EventIdentify> gatewayObj = new(GatewayOpCode.Identify, identify);
         string serialized = JsonSerializer.Serialize(gatewayObj, _serializerOptions);
 
-        Console.WriteLine("Sending identify message:\n" + serialized);
+        _logger.LogInformation("Sending identify to discord");
         _websocketClient.Send(serialized);
     }
 }

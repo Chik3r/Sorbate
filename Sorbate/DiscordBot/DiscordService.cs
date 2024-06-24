@@ -11,19 +11,20 @@ public class DiscordService : BackgroundService {
     private readonly StorageHandler _storageHandler;
     private readonly DiscordClient? _discordClient;
 
-    public DiscordService(ILogger<DiscordService> logger, HttpClient client, StorageHandler storageHandler, IConfiguration configuration) {
+    public DiscordService(ILogger<DiscordService> logger, ILogger<DiscordClient> clientLogger, HttpClient client,
+        StorageHandler storageHandler, IConfiguration configuration) {
         _logger = logger;
         _storageHandler = storageHandler;
-        
+
         string? discordAuthToken = configuration.GetSection("Discord")["AuthToken"];
         if (string.IsNullOrWhiteSpace(discordAuthToken)) {
             logger.LogError("Missing discord authorization token");
             return;
         }
-        
-        _discordClient = new DiscordClient(client, discordAuthToken);
+
+        _discordClient = new DiscordClient(clientLogger, client, discordAuthToken);
     }
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         if (_discordClient is null) {
             _logger.LogInformation("Discord client not initialized, stopping service");
@@ -32,6 +33,7 @@ public class DiscordService : BackgroundService {
         
         _discordClient.Start();
 
+        _logger.LogInformation("Starting .tmod file search");
         await foreach (Attachment attachment in _discordClient.SearchForFiles().WithCancellation(stoppingToken)) {
             // process the attachments
             string extension = Path.GetExtension(attachment.Filename);
@@ -44,13 +46,12 @@ public class DiscordService : BackgroundService {
             await using Stream file = await _storageHandler.DownloadModFile(attachment.Url);
             await _storageHandler.StoreModFile(file);
         }
+        _logger.LogInformation("Finished .tmod file search");
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken) {
+        _discordClient?.Stop();
         
-        // We have finished processing all attachments
-        // Now we simply run in the background processing any incoming websocket messages (in the DiscordClient)
-        while (!stoppingToken.IsCancellationRequested) {
-            await Task.Delay(1000, stoppingToken);
-        }
-            
-        _discordClient.Stop();
+        return base.StopAsync(cancellationToken);
     }
 }
