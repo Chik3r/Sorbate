@@ -37,10 +37,8 @@ public class DiscordService : BackgroundService {
         await foreach (Attachment attachment in _discordClient.SearchForFiles().WithCancellation(stoppingToken)) {
             // process the attachments
             string extension = Path.GetExtension(attachment.Filename);
-            if (extension != ".tmod") // TODO: This should be a constant that can be easily swapped globally
+            if (extension != ".tmod")
                 continue;
-            
-            // TODO: Ignore file if over a certain size (e.g. 300MB) and warn
             
             // Store the attachment
             await using Stream file = await _storageHandler.DownloadModFile(attachment.Url);
