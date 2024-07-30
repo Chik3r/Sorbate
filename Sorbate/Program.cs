@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sorbate.FileScrapers.Discord;
+using Sorbate.FileScrapers.ModBrowser;
 using Sorbate.Storage;
 using Sorbate.Storage.Analyzers;
 using Sorbate.Storage.Models;
@@ -21,6 +22,7 @@ class Program {
         builder.Services.AddDbContextFactory<StorageContext>(options => options.UseNpgsql(connectionString));
 
         builder.Services.AddHostedService<DiscordScraperService>();
+        builder.Services.AddHostedService<ModBrowserScraperService>();
         builder.Services.AddSingleton<AnalyzerService>()
             .AddHostedService<AnalyzerService>(provider => provider.GetService<AnalyzerService>()!);
         builder.Services.AddSingleton<StorageHandler>();
