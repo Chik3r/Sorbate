@@ -1,4 +1,4 @@
-﻿namespace Sorbate.DiscordBot.Data;
+﻿namespace Sorbate.FileScrapers.Discord.Data;
 
 [Flags]
 public enum GatewayIntent {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Sorbate.DiscordBot.Data.Events;
+namespace Sorbate.FileScrapers.Discord.Data.Events;
 
 public record EventIdentify(
     [property: JsonPropertyName("token")]

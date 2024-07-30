@@ -4,11 +4,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using Sorbate.DiscordBot.Data;
-using Sorbate.DiscordBot.Data.Events;
+using Sorbate.FileScrapers.Discord.Data;
+using Sorbate.FileScrapers.Discord.Data.Events;
 using Websocket.Client;
 
-namespace Sorbate.DiscordBot;
+namespace Sorbate.FileScrapers.Discord;
 
 public class DiscordClient {
     private readonly ILogger<DiscordClient> _logger;

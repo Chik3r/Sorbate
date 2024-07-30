@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Sorbate.DiscordBot;
+using Sorbate.FileScrapers.Discord;
 using Sorbate.Storage;
 using Sorbate.Storage.Analyzers;
 using Sorbate.Storage.Models;

@@ -1,4 +1,4 @@
-﻿namespace Sorbate.DiscordBot.Data;
+﻿namespace Sorbate.FileScrapers.Discord.Data;
 
 public enum GatewayOpCode {
     Dispatch = 0,

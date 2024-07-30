@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Sorbate.DiscordBot.Data;
+namespace Sorbate.FileScrapers.Discord.Data;
 
 public record Attachment(
     [property: JsonPropertyName("id")]

@@ -1,4 +1,4 @@
-﻿namespace Sorbate.DiscordBot;
+﻿namespace Sorbate.FileScrapers.Discord;
 
 public static class Constants {
     // You are supposed to get this uri from the GetGateway endpoint

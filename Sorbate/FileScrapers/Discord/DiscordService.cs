@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sorbate.DiscordBot.Data;
+using Sorbate.FileScrapers.Discord.Data;
 using Sorbate.Storage;
 
-namespace Sorbate.DiscordBot;
+namespace Sorbate.FileScrapers.Discord;
 
 public class DiscordService : BackgroundService {
     private readonly ILogger<DiscordService> _logger;
