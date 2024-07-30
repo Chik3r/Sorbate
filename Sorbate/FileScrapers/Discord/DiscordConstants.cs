@@ -1,6 +1,6 @@
 ﻿namespace Sorbate.FileScrapers.Discord;
 
-public static class Constants {
+public static class DiscordConstants {
     // You are supposed to get this uri from the GetGateway endpoint
     // However I am lazy
     public const string DiscordGatewayUri = "wss://gateway.discord.gg/?encoding=json&v=9";

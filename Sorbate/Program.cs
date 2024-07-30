@@ -20,7 +20,7 @@ class Program {
                                   throw new Exception("Missing connection string");
         builder.Services.AddDbContextFactory<StorageContext>(options => options.UseNpgsql(connectionString));
 
-        builder.Services.AddHostedService<DiscordService>();
+        builder.Services.AddHostedService<DiscordScraperService>();
         builder.Services.AddSingleton<AnalyzerService>()
             .AddHostedService<AnalyzerService>(provider => provider.GetService<AnalyzerService>()!);
         builder.Services.AddSingleton<StorageHandler>();

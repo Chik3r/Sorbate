@@ -6,12 +6,12 @@ using Sorbate.Storage;
 
 namespace Sorbate.FileScrapers.Discord;
 
-public class DiscordService : BackgroundService {
-    private readonly ILogger<DiscordService> _logger;
+public class DiscordScraperService : BackgroundService {
+    private readonly ILogger<DiscordScraperService> _logger;
     private readonly StorageHandler _storageHandler;
     private readonly DiscordClient? _discordClient;
 
-    public DiscordService(ILogger<DiscordService> logger, ILogger<DiscordClient> clientLogger, HttpClient client,
+    public DiscordScraperService(ILogger<DiscordScraperService> logger, ILogger<DiscordClient> clientLogger, HttpClient client,
         StorageHandler storageHandler, IConfiguration configuration) {
         _logger = logger;
         _storageHandler = storageHandler;

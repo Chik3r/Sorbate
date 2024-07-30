@@ -13,7 +13,7 @@ namespace Sorbate.FileScrapers.Discord;
 public class DiscordClient {
     private readonly ILogger<DiscordClient> _logger;
     private readonly HttpClient _httpClient;
-    private readonly WebsocketClient _websocketClient = new(new Uri(Constants.DiscordGatewayUri));
+    private readonly WebsocketClient _websocketClient = new(new Uri(DiscordConstants.DiscordGatewayUri));
     private readonly CancellationTokenSource _cts = new();
     private readonly JsonSerializerOptions _serializerOptions = new();
     private PeriodicTimer? _heartbeatTimer;
@@ -46,7 +46,7 @@ public class DiscordClient {
         int totalNumMessages = int.MaxValue;
 
         while (offset < totalNumMessages) {
-            string url = Constants.SearchUri + $"&offset={offset}"; 
+            string url = DiscordConstants.SearchUri + $"&offset={offset}"; 
             HttpResponseMessage result = await _httpClient.GetAsync(url, _cts.Token);
             
             if (result.StatusCode == HttpStatusCode.TooManyRequests && result.Headers.RetryAfter?.Delta.HasValue == true) {
