@@ -29,8 +29,10 @@ public class AnalyzerService : BackgroundService {
         }
         
         _logger.LogDebug("Analyzing mod with name '{ModName}'", modInfo.InternalModName);
-        foreach (ModAnalyzer analyzer in _analyzers)
+        foreach (ModAnalyzer analyzer in _analyzers) {
+            modFileStream.Position = 0; // Reset the stream to the beginning in case it was read previously
             modInfo = await analyzer.AnalyzeModFile(modFileStream, modInfo, tmodFile);
+        }
 
         return modInfo;
     }

@@ -26,6 +26,7 @@ public class DiscordScraperService : BackgroundService {
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        return;
         if (_discordClient is null) {
             _logger.LogInformation("Discord client not initialized, stopping service");
             return;
