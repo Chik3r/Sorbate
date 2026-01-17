@@ -10,8 +10,8 @@ public class AppDbContext : DbContext {
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         // TODO: Enable and test
-        // modelBuilder.Entity<ModRecord>()
-        //     .HasIndex(u => u.Hash)
-        //     .IsUnique();
+        modelBuilder.Entity<ModRecord>()
+            .HasIndex(u => u.Hash)
+            .IsUnique();
     }
 }

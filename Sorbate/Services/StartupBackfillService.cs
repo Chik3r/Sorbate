@@ -1,20 +1,24 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Sorbate.Data;
 using Sorbate.Scraping;
 
 namespace Sorbate.Services;
 
-public class StartupBackfillService : IHostedService {
-    private readonly ScrapeService _scrapeService;
-    private readonly IConfiguration _config;
+public class StartupBackfillService(IServiceScopeFactory scopeFactory, IConfiguration config) : IHostedService {
+    public async Task StartAsync(CancellationToken token) {
+        if (!config.GetValue<bool>("Scraping:RunBackfillOnStartup")) {
+            return;
+        }
 
-    public StartupBackfillService(ScrapeService scrapeService, IConfiguration config) {
-        _scrapeService = scrapeService;
-        _config = config;
-    }
+        using IServiceScope scope = scopeFactory.CreateScope();
+        AppDbContext
+            db = scope.ServiceProvider.GetRequiredService<AppDbContext>(); // TODO: Replace with DB factory instead
 
-    public async Task StartAsync(CancellationToken cancellationToken) {
-        if (_config.GetValue<bool>("Scraping:RunBackfillOnStartup")) 
-            await _scrapeService.RunHistorical();
+        foreach (IScraper scraper in scope.ServiceProvider.GetServices<IScraper>()) {
+            IEnumerable<ModRecord> data = await scraper.ScrapeHistorical(token);
+            db.AddRange(data);
+        }
+
+        await db.SaveChangesAsync(token);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
