@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Sorbate.Data;
+using Tomat.FNB.TMOD;
 
 namespace Sorbate.Scraping;
 
@@ -123,14 +124,14 @@ public class SteamScraper : IScraper {
 
             foreach (string tmodFile in tmodFiles) {
                 // TODO: erase the tmod's Signature field
-                byte[] data = await File.ReadAllBytesAsync(tmodFile, token);
-                byte[] hash = SHA1.HashData(data);
+                await using FileStream fs = File.OpenRead(tmodFile);
+                SerializableTmodFile tmod = SerializableTmodFile.FromStream(fs);
 
                 ModRecord record = new() {
                     Timestamp = DateTime.UnixEpoch.AddSeconds(fileDetail.TimeUpdated),
                     Source = SourceName,
-                    Hash = hash,
-                    Data = data,
+                    Hash = tmod.Hash,
+                    Data = tmod,
                 };
 
                 // TODO: DEBUG

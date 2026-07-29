@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Tomat.FNB.TMOD;
 
 namespace Sorbate.Data;
 
@@ -12,5 +13,5 @@ public record ModRecord {
     [Required]
     public string? FileName { get; set; }
     [NotMapped]
-    public byte[]? Data { get; set; }
+    public SerializableTmodFile? Data { get; set; }
 }
