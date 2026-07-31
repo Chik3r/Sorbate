@@ -12,11 +12,13 @@ class Program {
         string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                                   throw new Exception("Missing connection string");
         // TODO: use DB factory instead
+        builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(connectionString));
         builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
         builder.Services.AddHttpClient();
 
         builder.Services.AddSingleton<IScraper, SteamScraper>();
+        builder.Services.AddSingleton<IStorage, StorageHandler>();
 
         builder.Services.AddHostedService<BackgroundScrapeService>();
         builder.Services.AddHostedService<StartupBackfillService>();

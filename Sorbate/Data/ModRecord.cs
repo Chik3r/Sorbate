@@ -9,7 +9,7 @@ public record ModRecord {
     
     public DateTime Timestamp { get; set; }
     
-    public string Source { get; set; }
+    public string? Source { get; set; }
     
     [Length(20, 20), Required]
     public byte[]? Hash { get; set; }
@@ -18,6 +18,8 @@ public record ModRecord {
     public string? FileName { get; set; }
     
     public string? FileId { get; set; } // For object storage
+    
+    public bool Hidden { get; set; }
     
     [NotMapped]
     public SerializableTmodFile? Data { get; set; }
