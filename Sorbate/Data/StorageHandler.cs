@@ -9,9 +9,9 @@ namespace Sorbate.Data;
 
 public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorage {
     public async Task<bool> Upload(ModRecord record) {
-        if (record.Data is null) {
+        if (record.Data?.Hash is null) {
             // TODO: proper logging
-            Console.WriteLine("data is null, uh oh");
+            Console.WriteLine("Either data or hash is null, uh oh");
 
             return false;
         }
@@ -19,7 +19,14 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         
         await using AppDbContext db = await dbFactory.CreateDbContextAsync();
 
-        // TODO: do checks on the record, filter if already uploaded etc 
+        if (db.ModRecords.Any(x => x.Hash == modFile.Hash)) {
+            Console.WriteLine($"Mod {modFile.Name} (version {modFile.Version}) already exists, skip.");
+            
+            // TODO: do more checks on the record, filter if already uploaded etc 
+            
+            return true;
+        }
+        
 
         PopulateModMetadata(record, modFile);
 
