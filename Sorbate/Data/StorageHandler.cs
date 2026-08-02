@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Tomat.FNB.TMOD;
+using Tomat.FNB.TMOD.Converters;
 using Tomat.FNB.TMOD.Converters.Extractors;
 using Tomat.FNB.TMOD.Utilities;
 
@@ -19,6 +20,20 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         await using AppDbContext db = await dbFactory.CreateDbContextAsync();
 
         // TODO: do checks on the record, filter if already uploaded etc 
+
+        PopulateModMetadata(record, modFile);
+
+        if (modFile.Entries.TryGetValue("icon_workshop.rawimg", out ISerializableTmodFile.FileEntry rawImageEntry) ||
+            modFile.Entries.TryGetValue("icon.rawimg", out rawImageEntry)) {
+            IFileConverter extractor = RawimgExtractor.GetRawimgExtractor();
+            byte[] rawImage = TmodExtensions.Decompress(rawImageEntry.Data!, rawImageEntry.Length);
+
+            (string path, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
+            
+            // TODO: Upload mod icon
+        }
+        
+        // TODO: Upload mod
         
         // pretend we uploaded it to the object storage
         var g = Guid.CreateVersion7();
@@ -26,30 +41,7 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         record.FileName = g.ToString();
         record.FileId = "test_id";
 
-        string? displayName = null;
-        string? author = null;
-        if (modFile.Entries.TryGetValue("Info", out ISerializableTmodFile.FileEntry info) is true) {
-            byte[] data = TmodExtensions.Decompress(info.Data!, info.Length);
-            Dictionary<string, string?> convertedInfo = InfoDictExtractor.Convert(data);
-
-            displayName = convertedInfo["displayName"];
-            author = convertedInfo["author"];
-
-            if (string.IsNullOrWhiteSpace(displayName))
-                displayName = null;
-            
-            if (string.IsNullOrWhiteSpace(author))
-                author = null;
-        }
-        record.DisplayName = displayName;
-        record.Author = author;
-
-        record.Version = modFile.Version;
-        record.ModLoaderVersion = modFile.ModLoaderVersion;
-        record.InternalName = modFile.Name;
-
         EntityEntry<ModRecord> entry = await db.AddAsync(record);
-        
         await db.SaveChangesAsync();
         return true;
     }
@@ -69,5 +61,29 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
 
     public Task<ModRecord> List(int page, int limit) {
         throw new NotImplementedException();
+    }
+    
+    private static void PopulateModMetadata(ModRecord record, SerializableTmodFile modFile) {
+        string? displayName = null;
+        string? author = null;
+        if (modFile.Entries.TryGetValue("Info", out ISerializableTmodFile.FileEntry info)) {
+            byte[] data = TmodExtensions.Decompress(info.Data!, info.Length);
+            Dictionary<string, string?> convertedInfo = InfoDictExtractor.Convert(data);
+
+            displayName = convertedInfo["displayName"];
+            author = convertedInfo["author"];
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                displayName = null;
+            
+            if (string.IsNullOrWhiteSpace(author))
+                author = null;
+        }
+        record.DisplayName = displayName;
+        record.Author = author;
+
+        record.Version = modFile.Version;
+        record.ModLoaderVersion = modFile.ModLoaderVersion;
+        record.InternalName = modFile.Name;
     }
 }
