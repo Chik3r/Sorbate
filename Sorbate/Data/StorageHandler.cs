@@ -19,7 +19,7 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         
         await using AppDbContext db = await dbFactory.CreateDbContextAsync();
 
-        if (db.ModRecords.Any(x => x.Hash == modFile.Hash)) {
+        if (await db.ModRecords.AnyAsync(x => x.Hash == modFile.Hash)) {
             Console.WriteLine($"Mod {modFile.Name} (version {modFile.Version}) already exists, skip.");
             
             // TODO: do more checks on the record, filter if already uploaded etc 
@@ -49,7 +49,9 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         record.FileId = "test_id";
 
         if (record.PublishedFileId is not null) {
-            int id = db.SteamUpdateRecords.FirstOrDefault(x => x.PublishedFileId == record.PublishedFileId)?.Id ?? 0;
+            int id = (await db.SteamUpdateRecords
+                .FirstOrDefaultAsync(x => x.PublishedFileId == record.PublishedFileId))?
+                .Id ?? 0;
             
             SteamUpdateRecord updateRecord = new() {
                 Id = id,
