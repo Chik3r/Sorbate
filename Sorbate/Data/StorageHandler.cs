@@ -19,54 +19,43 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         
         await using AppDbContext db = await dbFactory.CreateDbContextAsync();
 
+        // Check if we already have a file with the same hash.
+        // If so, then do not upload this file, and make sure to write down when we last updated the related published file id.
         if (await db.ModRecords.AnyAsync(x => x.Hash == modFile.Hash)) {
             Console.WriteLine($"Mod {modFile.Name} (version {modFile.Version}) already exists, skip.");
             
             // TODO: do more checks on the record, filter if already uploaded etc 
+
+            await UpdateRecordTimestamp(record, db);
+            await db.SaveChangesAsync();
             
             return true;
         }
         
-
+        // Read mod metadata (such as author, display name, etc.) from the .tmod file, 
+        // and write it to the ModRecord.
         PopulateModMetadata(record, modFile);
 
-        if (modFile.Entries.TryGetValue("icon_workshop.rawimg", out ISerializableTmodFile.FileEntry rawImageEntry) ||
-            modFile.Entries.TryGetValue("icon.rawimg", out rawImageEntry)) {
-            IFileConverter extractor = RawimgExtractor.GetRawimgExtractor();
-            byte[] rawImage = TmodExtensions.Decompress(rawImageEntry.Data!, rawImageEntry.Length);
-
-            (string path, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
-            
-            // TODO: Upload mod icon
-        }
-        
-        // TODO: Upload mod
-        
-        // pretend we uploaded it to the object storage
+        // Upload the mod and its icon, storing the file as <guid>.<extension>
         var g = Guid.CreateVersion7();
+        UploadIcon(modFile, g); // Gets the mod icon from the .tmod file, and uploads it
+        UploadMod(record, g);
 
-        record.FileName = g.ToString();
-        record.FileId = "test_id";
-
-        if (record.PublishedFileId is not null) {
-            SteamUpdateRecord? updateRecord = await db.SteamUpdateRecords
-                .FirstOrDefaultAsync(x => x.PublishedFileId == record.PublishedFileId);
-
-            updateRecord ??= new SteamUpdateRecord {
-                PublishedFileId = record.PublishedFileId,
-                TimeUpdated = record.Timestamp,
-            };
-
-            updateRecord.TimeUpdated = record.Timestamp;
-
-            db.Update(updateRecord);
-        }
-
+        await UpdateRecordTimestamp(record, db);
         EntityEntry<ModRecord> entry = await db.AddAsync(record);
-        
         
         await db.SaveChangesAsync();
         return true;
+    }
+
+    private static void UploadMod(ModRecord record, Guid g) {
+        // TODO: Upload mod
+        
+        // pretend we uploaded it to the object storage
+        
+
+        record.FileName = g.ToString();
+        record.FileId = "test_id";
     }
 
     public async Task<bool> UploadRange(IEnumerable<ModRecord> records) {
@@ -115,5 +104,33 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         record.Version = modFile.Version;
         record.ModLoaderVersion = modFile.ModLoaderVersion;
         record.InternalName = modFile.Name;
+    }
+    
+    private static async Task UpdateRecordTimestamp(ModRecord record, AppDbContext db) {
+        if (record.PublishedFileId is not null) {
+            SteamUpdateRecord? updateRecord = await db.SteamUpdateRecords
+                .FirstOrDefaultAsync(x => x.PublishedFileId == record.PublishedFileId);
+
+            updateRecord ??= new SteamUpdateRecord {
+                PublishedFileId = record.PublishedFileId,
+                TimeUpdated = record.Timestamp,
+            };
+
+            updateRecord.TimeUpdated = record.Timestamp;
+
+            db.Update(updateRecord);
+        }
+    }
+    
+    private static void UploadIcon(SerializableTmodFile modFile, Guid g) {
+        if (modFile.Entries.TryGetValue("icon_workshop.rawimg", out ISerializableTmodFile.FileEntry rawImageEntry) ||
+            modFile.Entries.TryGetValue("icon.rawimg", out rawImageEntry)) {
+            IFileConverter extractor = RawimgExtractor.GetRawimgExtractor();
+            byte[] rawImage = TmodExtensions.Decompress(rawImageEntry.Data!, rawImageEntry.Length);
+
+            (string path, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
+            
+            // TODO: Upload mod icon
+        }
     }
 }
