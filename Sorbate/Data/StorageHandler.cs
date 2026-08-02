@@ -49,15 +49,15 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         record.FileId = "test_id";
 
         if (record.PublishedFileId is not null) {
-            int id = (await db.SteamUpdateRecords
-                .FirstOrDefaultAsync(x => x.PublishedFileId == record.PublishedFileId))?
-                .Id ?? 0;
-            
-            SteamUpdateRecord updateRecord = new() {
-                Id = id,
+            SteamUpdateRecord? updateRecord = await db.SteamUpdateRecords
+                .FirstOrDefaultAsync(x => x.PublishedFileId == record.PublishedFileId);
+
+            updateRecord ??= new SteamUpdateRecord {
                 PublishedFileId = record.PublishedFileId,
                 TimeUpdated = record.Timestamp,
             };
+
+            updateRecord.TimeUpdated = record.Timestamp;
 
             db.Update(updateRecord);
         }
