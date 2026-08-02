@@ -13,6 +13,7 @@ public class SteamScraper : IScraper {
         $"https://api.steampowered.com/IPublishedFileService/QueryFiles/v1/?key={{0}}&query_type=21&cursor={{1}}&numperpage=3&appid={TmlAppId}&return_short_description=true";
     
     private readonly HttpClient _http;
+    private readonly IStorage _storage;
     private readonly string? _steamApiKey;
     private readonly string? _steamCmdPath;
     private readonly string? _steamWriteDirectory;
@@ -20,8 +21,9 @@ public class SteamScraper : IScraper {
     
     public string SourceName => "Steam";
 
-    public SteamScraper(HttpClient http, IConfiguration configuration) {
+    public SteamScraper(HttpClient http, IConfiguration configuration, IStorage storage) {
         _http = http;
+        _storage = storage;
         _steamApiKey = configuration.GetValue<string>("Scraping:SteamApiKey");
         _steamCmdPath = configuration.GetValue<string>("Scraping:SteamCmdPath");
         _steamWriteDirectory = configuration.GetValue<string>("Scraping:SteamWriteDirectory");
@@ -151,6 +153,12 @@ public class SteamScraper : IScraper {
         foreach (PublishedFileDetail fileDetail in publishedFileDetails) {
             string id = fileDetail.PublishedFileId;
 
+            if (await _storage.GetLastUpdateTimestamp(id) == SteamTimeToDateTime(fileDetail.TimeUpdated)) {
+                Console.WriteLine($"Skipping mod {id}, already updated.");
+                
+                continue;
+            }
+
             // TODO: logging (DEBUG)
             Console.WriteLine("Added mod {0} to download list from Steam", id);
             await argWriter.WriteAsync($" +workshop_download_item {TmlAppId} {id} validate");
@@ -185,7 +193,7 @@ public class SteamScraper : IScraper {
             }
 
             ModRecord record = new() {
-                Timestamp = DateTime.UnixEpoch.AddSeconds(timestamp),
+                Timestamp = SteamTimeToDateTime(timestamp),
                 Source = SourceName,
                 PublishedFileId = workshopId,
                 Hash = tmod.Hash,
@@ -201,5 +209,9 @@ public class SteamScraper : IScraper {
         Directory.Delete(Path.Combine(RealSteamWriteDirectory, "steamapps/workshop/content"), true);
 
         return modRecords;
+    }
+
+    private static DateTime SteamTimeToDateTime(int timestamp) {
+        return DateTime.UnixEpoch.AddSeconds(timestamp);
     }
 }

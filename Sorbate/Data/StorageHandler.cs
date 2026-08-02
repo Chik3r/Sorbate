@@ -83,7 +83,14 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
     public Task<ModRecord> List(int page, int limit) {
         throw new NotImplementedException();
     }
-    
+
+    public async Task<DateTime?> GetLastUpdateTimestamp(string fileId) {
+        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+
+        SteamUpdateRecord? record = await db.SteamUpdateRecords.FirstOrDefaultAsync(x => x.PublishedFileId == fileId);
+        return record?.TimeUpdated;
+    }
+
     private static void PopulateModMetadata(ModRecord record, SerializableTmodFile modFile) {
         string? displayName = null;
         string? author = null;
