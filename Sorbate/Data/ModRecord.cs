@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Tomat.FNB.TMOD;
 
@@ -19,7 +20,24 @@ public record ModRecord {
     
     public string? FileId { get; set; } // For object storage
     
+    [Required]
+    [DefaultValue(false)]
     public bool Hidden { get; set; }
+    
+    
+    // Mod data
+    [Required]
+    public string? InternalName { get; set; }
+    
+    public string? DisplayName { get; set; }
+    
+    public string? Author { get; set; }
+    
+    [Required]
+    public string? Version { get; set; }
+    
+    [Required]
+    public string? ModLoaderVersion { get; set; }
     
     [NotMapped]
     public SerializableTmodFile? Data { get; set; }

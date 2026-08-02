@@ -166,7 +166,7 @@ public class SteamScraper : IScraper {
         if (!Directory.Exists(searchFolder)) {
             // TODO: warn
             Console.WriteLine("Failed to find download directory {0}", searchFolder);
-            return null;
+            return [];
         }
 
         IEnumerable<string> tmodFiles =
