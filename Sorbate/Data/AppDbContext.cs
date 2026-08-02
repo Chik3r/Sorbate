@@ -4,6 +4,8 @@ namespace Sorbate.Data;
 
 public class AppDbContext : DbContext {
     public DbSet<ModRecord> ModRecords => Set<ModRecord>();
+    
+    public DbSet<SteamUpdateRecord>  SteamUpdateRecords => Set<SteamUpdateRecord>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {
     }

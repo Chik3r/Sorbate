@@ -48,7 +48,21 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         record.FileName = g.ToString();
         record.FileId = "test_id";
 
+        if (record.PublishedFileId is not null) {
+            int id = db.SteamUpdateRecords.FirstOrDefault(x => x.PublishedFileId == record.PublishedFileId)?.Id ?? 0;
+            
+            SteamUpdateRecord updateRecord = new() {
+                Id = id,
+                PublishedFileId = record.PublishedFileId,
+                TimeUpdated = record.Timestamp,
+            };
+
+            db.Update(updateRecord);
+        }
+
         EntityEntry<ModRecord> entry = await db.AddAsync(record);
+        
+        
         await db.SaveChangesAsync();
         return true;
     }

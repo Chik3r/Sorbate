@@ -10,8 +10,13 @@ public record ModRecord {
     
     public DateTime Timestamp { get; set; }
     
+    // Steam, 1.3 mod browser, etc.
     public string? Source { get; set; }
     
+    // For example, the published file id from steam
+    public string? PublishedFileId { get; set; }
+    
+    // Hash of the contents of the tmod file
     [Length(20, 20), Required]
     public byte[]? Hash { get; set; }
     
@@ -23,7 +28,6 @@ public record ModRecord {
     [Required]
     [DefaultValue(false)]
     public bool Hidden { get; set; }
-    
     
     // Mod data
     [Required]

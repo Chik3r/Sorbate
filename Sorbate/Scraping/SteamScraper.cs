@@ -187,6 +187,7 @@ public class SteamScraper : IScraper {
             ModRecord record = new() {
                 Timestamp = DateTime.UnixEpoch.AddSeconds(timestamp),
                 Source = SourceName,
+                PublishedFileId = workshopId,
                 Hash = tmod.Hash,
                 Data = tmod,
             };
