@@ -58,8 +58,8 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         record.FileId = "test_id";
     }
 
-    public async Task<bool> UploadRange(IEnumerable<ModRecord> records) {
-        foreach (ModRecord record in records) {
+    public async Task<bool> UploadRange(IAsyncEnumerable<ModRecord> records) {
+        await foreach (ModRecord record in records) {
             await Upload(record);
         }
 

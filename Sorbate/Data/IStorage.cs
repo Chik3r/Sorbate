@@ -3,7 +3,7 @@
 public interface IStorage {
     public Task<bool> Upload(ModRecord record);
     
-    public Task<bool> UploadRange(IEnumerable<ModRecord> records);
+    public Task<bool> UploadRange(IAsyncEnumerable<ModRecord> records);
     
     public Task<string> DownloadLink(int id);
     public Task<ModRecord> List(int page, int limit);

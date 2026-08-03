@@ -17,7 +17,7 @@ public class BackgroundScrapeService(IServiceScopeFactory scopeFactory, IConfigu
         using IServiceScope scope = scopeFactory.CreateScope();
 
         foreach (IScraper scraper in scope.ServiceProvider.GetServices<IScraper>()) {
-            IEnumerable<ModRecord> data = await scraper.ScrapeLatest(token);
+            IAsyncEnumerable<ModRecord> data = await scraper.ScrapeLatest(token);
             await storage.UploadRange(data);
         }
     }

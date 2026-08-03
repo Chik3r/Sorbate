@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Sorbate.Data;
 using Tomat.FNB.TMOD;
@@ -47,125 +49,149 @@ public class SteamScraper : IScraper {
         }
     }
 
-    public async Task<IEnumerable<ModRecord>> ScrapeLatest(CancellationToken token = default) {
+    public async Task<IAsyncEnumerable<ModRecord>> ScrapeLatest(CancellationToken token = default) {
         if (_steamApiKey is null) {
             // TODO: use proper logging (INFO maybe)
             Console.WriteLine("Steam API Key not found");
-            return [];
+            return AsyncEnumerable.Empty<ModRecord>();
         }
 
-        if (_steamCmdPath is null || _steamWriteDirectory is null) {
+        if (_steamCmdPath is null || _steamWriteDirectory is null || !File.Exists(_steamCmdPath)) {
             // TODO: logging
             Console.WriteLine("SteamCMD Path or write directory not found");
-            return [];
+            return AsyncEnumerable.Empty<ModRecord>();
         }
 
-        IReadOnlyList<PublishedFileDetail>? publishedFiles = await RequestSteamFiles(token);
-        if (publishedFiles is null)
-            // TODO: logging or something
-            return [];
+        IAsyncEnumerable<PublishedFileDetail> publishedFiles = ListWorkshopItems(token);
 
-        // Required to be able to keep track of the update timestamp of a mod.
-        // Might be slightly inaccurate if multiple updates are made between scrapings
-        Dictionary<string, int> fileIdTimestampMapping = 
-            publishedFiles.ToDictionary(x => x.PublishedFileId, x => x.TimeUpdated);
-
-        // Use ID to access SteamCMD and download mod
-        // Command is  './steamcmd.exe +login anonymous +workshop_download_item {TmlAppId} {id} validate +quit'
-        // File will be saved to './steamapps/workshop/content/{TmlAppId}/{id}/'
-        string downloadArgs = await PrepareDownloadArgument(publishedFiles);
-        
-        // TODO: logging (DEBUG)
-        Console.WriteLine("Downloading mods from Steam");
-        ProcessStartInfo procInfo = new() {
-            Arguments = downloadArgs,
-            FileName = _steamCmdPath,
-            WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath)),
-            // UseShellExecute = true
-        };
-
-        Process? steamCmd = Process.Start(procInfo);
-        if (steamCmd is null) {
-            // TODO: log WARN
-            Console.WriteLine("Failed to start SteamCMD");
-            return [];
-        }
-
-        await steamCmd.WaitForExitAsync(token);
-
-        List<ModRecord> modRecords = await ListDownloadedFiles(fileIdTimestampMapping);
-        return modRecords;
+        return DownloadWorkshopItems(publishedFiles, token);
     }
 
-    public async Task<IEnumerable<ModRecord>> ScrapeHistorical(CancellationToken token = default) {
+    public async Task<IAsyncEnumerable<ModRecord>> ScrapeHistorical(CancellationToken token = default) {
         // TODO: do it
         await Task.Delay(20, token);
-        
-        return [
-            new ModRecord {
-                Timestamp = DateTime.UtcNow.AddDays(-1),
-                Source = $"{SourceName}-mod_id_historical",
-                Hash = new byte[20],
-                FileName = "historical"
+
+        return AsyncEnumerable.Empty<ModRecord>();
+        // return [
+        //     new ModRecord {
+        //         Timestamp = DateTime.UtcNow.AddDays(-1),
+        //         Source = $"{SourceName}-mod_id_historical",
+        //         Hash = new byte[20],
+        //         FileName = "historical"
+        //     }
+        // ];
+    }
+
+    private async IAsyncEnumerable<PublishedFileDetail> ListWorkshopItems([EnumeratorCancellation] CancellationToken token, bool multiplePages = false) {
+        string cursor = "*";
+
+        while (true) {
+            token.ThrowIfCancellationRequested();
+            
+            string api = string.Format(ApiUrl, _steamApiKey, cursor);
+            
+            // Make request to API
+            HttpResponseMessage response = await _http.GetAsync(api, token);
+            if (!response.IsSuccessStatusCode) {
+                // TODO: logging (WARN)
+                Console.WriteLine("Steam API returned {0}", response.StatusCode);
+                yield break;
             }
-        ];
-    }
-    
-    private async Task<IReadOnlyList<PublishedFileDetail>?> RequestSteamFiles(CancellationToken token) {
-        string api = string.Format(ApiUrl, _steamApiKey, "*");
-        // Make request to API
-        HttpResponseMessage response = await _http.GetAsync(api, token);
-        if (!response.IsSuccessStatusCode) {
-            // TODO: logging (WARN)
-            Console.WriteLine("Steam API returned {0}", response.StatusCode);
-            return null;
+
+            // Get JSON from response and parse it
+            SteamResponseRoot? steamResponseRoot =
+                JsonSerializer.Deserialize<SteamResponseRoot>(await response.Content.ReadAsStringAsync(token));
+            if (steamResponseRoot is null) {
+                // TODO: logging (WARN)
+                Console.WriteLine("Failed to deserialize {0}", response);
+                yield break;
+            }
+            
+            SteamResponse steamResponse = steamResponseRoot.Response;
+            foreach (PublishedFileDetail fileDetail in steamResponse.PublishedFileDetails) {
+                yield return fileDetail;
+            }
+            cursor = steamResponse.NextCursor;
+
+            if (!multiplePages) break;
+            if (steamResponse.PublishedFileDetails.Count == 0) break;
         }
-
-        // Get JSON from response and parse it
-        SteamResponseRoot? steamResponseRoot =
-            JsonSerializer.Deserialize<SteamResponseRoot>(await response.Content.ReadAsStringAsync(token));
-        if (steamResponseRoot is null) {
-            // TODO: logging (WARN)
-            Console.WriteLine("Failed to deserialize {0}", response);
-            return null;
-        }
-        
-        SteamResponse steamResponse = steamResponseRoot.Response;
-
-        var publishedFiles = steamResponse.PublishedFileDetails;
-        return publishedFiles;
     }
-    
-    private async Task<string> PrepareDownloadArgument(IReadOnlyList<PublishedFileDetail> publishedFileDetails) {
-        // TODO: Pagination. maybe page limit or something
-        // TODO: maybe filter somehow to see if we already have this upload?, or maybe this could be handled when "uploading"
-        
-        // TODO: maybe filter somehow to see if we already have this upload?
-        // Ok, idea, do an initial loop to filter for IDs that are not in DB or that have been updated recently
-        // Remove every folder for a mod not in PublishedFileDetails (so we remove any old mods) or maybe not in our filtered list
-        // Then, with this list of IDs, create the SteamCMD command "steamcmd +login anon +workshop_download ... +workshop.... +quit"
-        // with a +workshop_download_item for each mod
-        // Finally, get the .tmod files and process them etc
-        
-        StringWriter argWriter = new();
-        await argWriter.WriteAsync($"+force_install_dir {_steamWriteDirectory} +login anonymous");
 
-        foreach (PublishedFileDetail fileDetail in publishedFileDetails) {
-            string id = fileDetail.PublishedFileId;
+    private async IAsyncEnumerable<(string argument, Dictionary<string, int> idToSteamTime)> PrepareDownloadArguments(IAsyncEnumerable<PublishedFileDetail> workshopItems, [EnumeratorCancellation] CancellationToken token) {
+        string prefixArgument = $"+force_install_dir {_steamWriteDirectory} +login anonymous";
+        const string suffixArgument = " +quit";
+        StringBuilder argBuilder = new();
 
-            if (await _storage.GetLastUpdateTimestamp(id) == SteamTimeToDateTime(fileDetail.TimeUpdated)) {
-                Console.WriteLine($"Skipping mod {id}, already updated.");
-                
+        // Only download up to sizeLimit amount of data at a time.
+        // This is needed because all the downloaded data will be loaded into RAM later on.
+        const int sizeLimit = 2 * 1000 * 1000; // 2 GB
+        int sumSize = 0;
+        Dictionary<string, int> idToSteamTime = new();
+        await foreach (PublishedFileDetail workshopItem in workshopItems.WithCancellation(token)) {
+            string id = workshopItem.PublishedFileId;
+
+            if (!int.TryParse(workshopItem.FileSize, out int fileSize)) {
+                Console.WriteLine($"Failed to get file size of mod {id}, value: {workshopItem.FileSize}. Skipping mod.");
+                continue;
+            }
+            
+            // Skip files that are already in storage
+            if (await _storage.GetLastUpdateTimestamp(id) == SteamTimeToDateTime(workshopItem.TimeUpdated)) {
+                Console.WriteLine($"Skipping mod {id}, already in storage.");
                 continue;
             }
 
-            // TODO: logging (DEBUG)
-            Console.WriteLine("Added mod {0} to download list from Steam", id);
-            await argWriter.WriteAsync($" +workshop_download_item {TmlAppId} {id} validate");
-        }
+            // If we already have some files in the "queue" and adding this file would bring us over the sizeLimit,
+            // then return the argument we have so far, clean up and then continue.
+            if (sumSize != 0 && (sumSize + fileSize) >= sizeLimit) {
+                // Over the size limit, fetch the current queue
+                argBuilder.Append(suffixArgument);
+                yield return (argBuilder.ToString(), idToSteamTime);
+                argBuilder.Clear();
+                argBuilder.Append(prefixArgument);
+                idToSteamTime.Clear();
+            }
 
-        await argWriter.WriteAsync(" +quit");
-        return argWriter.ToString();
+            sumSize += fileSize;
+            argBuilder.Append($" +workshop_download_item {TmlAppId} {id} validate");
+            idToSteamTime.Add(id, workshopItem.TimeUpdated);
+        }
+    }
+
+    private async IAsyncEnumerable<ModRecord> DownloadWorkshopItems(
+        IAsyncEnumerable<PublishedFileDetail> workshopItems,
+        [EnumeratorCancellation] CancellationToken token) {
+        await foreach ((string argument, Dictionary<string, int> idToSteamTime) in 
+                       PrepareDownloadArguments(workshopItems, token)) {
+            
+            // Start SteamCMD, download the mods in the argument, and then return the tmod files in memory.
+            
+            // Use ID to access SteamCMD and download mod
+            // Command is  './steamcmd.exe +login anonymous +workshop_download_item {TmlAppId} {id} validate +quit'
+            // File will be saved to './steamapps/workshop/content/{TmlAppId}/{id}/'
+            
+            // TODO: logging (DEBUG)
+            Console.WriteLine("Downloading mods from Steam");
+            ProcessStartInfo procInfo = new() {
+                Arguments = argument,
+                FileName = _steamCmdPath,
+                WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath!)),
+                // UseShellExecute = true
+            };
+
+            Process? steamCmd = Process.Start(procInfo);
+            if (steamCmd is null) {
+                // TODO: log WARN
+                Console.WriteLine("Failed to start SteamCMD");
+                yield break;
+            }
+
+            IEnumerable<ModRecord> downloadedFiles = await ListDownloadedFiles(idToSteamTime);
+            foreach (ModRecord record in downloadedFiles) {
+                yield return record;
+            }
+        }
     }
     
     private async Task<List<ModRecord>> ListDownloadedFiles(Dictionary<string, int> fileIdTimestampMapping) {
@@ -182,7 +208,7 @@ public class SteamScraper : IScraper {
 
         List<ModRecord> modRecords = [];
         foreach (string tmodFile in tmodFiles) {
-            // TODO: erase the tmod's Signature field
+            // The signature will be erased when writing the tmod file again
             await using FileStream fs = File.OpenRead(tmodFile);
             SerializableTmodFile tmod = SerializableTmodFile.FromStream(fs);
 
