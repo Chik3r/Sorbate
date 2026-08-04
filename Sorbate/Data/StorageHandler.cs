@@ -67,12 +67,35 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         // throw new NotImplementedException();
     }
 
-    public Task<string> DownloadLink(int id) {
-        throw new NotImplementedException();
+    public async Task<string?> GetModDownloadLink(int id) {
+        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        ModRecord? record = await db.ModRecords.FindAsync(id);
+
+        if (record is null) return null;
+        
+        // TODO: do magic to get a presigned download link
+        // string downloadLink = Magic(record.FileId);
+
+        return $"some-url.com/{record.FileName}.tmod";
     }
 
-    public Task<ModRecord> List(int page, int limit) {
-        throw new NotImplementedException();
+    public async Task<string?> GetIconDownloadLink(int id) {
+        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        ModRecord? record = await db.ModRecords.FindAsync(id);
+
+        if (record is null) return null;
+        
+        // TODO: do magic to get a presigned download link
+        // string downloadLink = Magic(record.FileId);
+
+        return $"some-url.com/{record.FileName}.png";
+    }
+
+    public async Task<IList<ModRecord>> ListMods(int page, int limit) {
+        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        
+        List<ModRecord> records = await db.ModRecords.Skip(limit * page).Take(limit).ToListAsync();
+        return records;
     }
 
     public async Task<DateTime?> GetLastUpdateTimestamp(string fileId) {

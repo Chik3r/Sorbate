@@ -5,8 +5,11 @@ public interface IStorage {
     
     public Task<bool> UploadRange(IAsyncEnumerable<ModRecord> records);
     
-    public Task<string> DownloadLink(int id);
-    public Task<ModRecord> List(int page, int limit);
+    public Task<string?> GetModDownloadLink(int id);
+
+    public Task<string?> GetIconDownloadLink(int id);
+    
+    public Task<IList<ModRecord>> ListMods(int page, int limit);
 
     public Task<DateTime?> GetLastUpdateTimestamp(string fileId);
 
