@@ -20,6 +20,8 @@ public class SteamScraper : IScraper {
     private readonly string? _steamCmdPath;
     private readonly string? _steamWriteDirectory;
     private string RealSteamWriteDirectory => Path.Combine(Path.GetDirectoryName(_steamCmdPath) ?? string.Empty, _steamWriteDirectory ?? string.Empty);
+
+    private static readonly SemaphoreSlim SteamCmdSemaphore = new(1, 1);
     
     public string SourceName => "Steam";
 
@@ -50,17 +52,7 @@ public class SteamScraper : IScraper {
     }
 
     public async Task<IAsyncEnumerable<ModRecord>> ScrapeLatest(CancellationToken token = default) {
-        if (_steamApiKey is null) {
-            // TODO: use proper logging (INFO maybe)
-            Console.WriteLine("Steam API Key not found");
-            return AsyncEnumerable.Empty<ModRecord>();
-        }
-
-        if (_steamCmdPath is null || _steamWriteDirectory is null || !File.Exists(_steamCmdPath)) {
-            // TODO: logging
-            Console.WriteLine("SteamCMD Path or write directory not found");
-            return AsyncEnumerable.Empty<ModRecord>();
-        }
+        if (!CheckValidSteamParameters()) return AsyncEnumerable.Empty<ModRecord>();
 
         IAsyncEnumerable<PublishedFileDetail> publishedFiles = ListWorkshopItems(token);
 
@@ -68,18 +60,31 @@ public class SteamScraper : IScraper {
     }
 
     public async Task<IAsyncEnumerable<ModRecord>> ScrapeHistorical(CancellationToken token = default) {
-        // TODO: do it
-        await Task.Delay(20, token);
+        if (!CheckValidSteamParameters()) return AsyncEnumerable.Empty<ModRecord>();
 
-        return AsyncEnumerable.Empty<ModRecord>();
-        // return [
-        //     new ModRecord {
-        //         Timestamp = DateTime.UtcNow.AddDays(-1),
-        //         Source = $"{SourceName}-mod_id_historical",
-        //         Hash = new byte[20],
-        //         FileName = "historical"
-        //     }
-        // ];
+        IAsyncEnumerable<PublishedFileDetail> publishedFiles = ListWorkshopItems(token, true);
+
+        return DownloadWorkshopItems(publishedFiles, token);
+    }
+    
+    /// <summary>
+    /// Ensures that the Steam API key, the SteamCMD path and the SteamCMD write directory are valid.
+    /// </summary>
+    /// <returns>Returns true if they pass a basic check.</returns>
+    private bool CheckValidSteamParameters() {
+        if (_steamApiKey is null) {
+            // TODO: use proper logging (INFO maybe)
+            Console.WriteLine("Steam API Key not found");
+            return false;
+        }
+
+        if (_steamCmdPath is null || _steamWriteDirectory is null || !File.Exists(_steamCmdPath)) {
+            // TODO: logging
+            Console.WriteLine("SteamCMD Path or write directory not found");
+            return false;
+        }
+
+        return true;
     }
 
     private async IAsyncEnumerable<PublishedFileDetail> ListWorkshopItems([EnumeratorCancellation] CancellationToken token, bool multiplePages = false) {
@@ -111,7 +116,9 @@ public class SteamScraper : IScraper {
             foreach (PublishedFileDetail fileDetail in steamResponse.PublishedFileDetails) {
                 yield return fileDetail;
             }
-            cursor = steamResponse.NextCursor;
+            
+            // Cursor can contain special characters such as +
+            cursor = Uri.EscapeDataString(steamResponse.NextCursor);
 
             if (!multiplePages) break;
             if (steamResponse.PublishedFileDetails.Count == 0) break;
@@ -122,6 +129,7 @@ public class SteamScraper : IScraper {
         string prefixArgument = $"+force_install_dir {_steamWriteDirectory} +login anonymous";
         const string suffixArgument = " +quit";
         StringBuilder argBuilder = new();
+        argBuilder.Append(prefixArgument);
 
         // Only download up to sizeLimit amount of data at a time.
         // This is needed because all the downloaded data will be loaded into RAM later on.
@@ -144,10 +152,12 @@ public class SteamScraper : IScraper {
 
             // If we already have some files in the "queue" and adding this file would bring us over the sizeLimit,
             // then return the argument we have so far, clean up and then continue.
-            if (sumSize != 0 && (sumSize + fileSize) >= sizeLimit) {
+            // Additionally, only download up to 20 mods at a time (just in case steam gets angry or something).
+            if ((sumSize != 0 && (sumSize + fileSize) >= sizeLimit) || idToSteamTime.Count >= 20) {
                 // Over the size limit, fetch the current queue
                 argBuilder.Append(suffixArgument);
                 yield return (argBuilder.ToString(), idToSteamTime);
+                sumSize = 0;
                 argBuilder.Clear();
                 argBuilder.Append(prefixArgument);
                 idToSteamTime.Clear();
@@ -157,6 +167,11 @@ public class SteamScraper : IScraper {
             argBuilder.Append($" +workshop_download_item {TmlAppId} {id} validate");
             idToSteamTime.Add(id, workshopItem.TimeUpdated);
         }
+
+        if (sumSize == 0) yield break;
+
+        argBuilder.Append(suffixArgument);
+        yield return (argBuilder.ToString(), idToSteamTime);
     }
 
     private async IAsyncEnumerable<ModRecord> DownloadWorkshopItems(
@@ -170,6 +185,8 @@ public class SteamScraper : IScraper {
             // Use ID to access SteamCMD and download mod
             // Command is  './steamcmd.exe +login anonymous +workshop_download_item {TmlAppId} {id} validate +quit'
             // File will be saved to './steamapps/workshop/content/{TmlAppId}/{id}/'
+
+            await SteamCmdSemaphore.WaitAsync(token);
             
             // TODO: logging (DEBUG)
             Console.WriteLine("Downloading mods from Steam");
@@ -184,13 +201,18 @@ public class SteamScraper : IScraper {
             if (steamCmd is null) {
                 // TODO: log WARN
                 Console.WriteLine("Failed to start SteamCMD");
+                SteamCmdSemaphore.Release();
                 yield break;
             }
+            
+            await steamCmd.WaitForExitAsync(token);
 
             IEnumerable<ModRecord> downloadedFiles = await ListDownloadedFiles(idToSteamTime);
             foreach (ModRecord record in downloadedFiles) {
                 yield return record;
             }
+
+            SteamCmdSemaphore.Release();
         }
     }
     

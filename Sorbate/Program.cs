@@ -13,7 +13,6 @@ class Program {
                                   throw new Exception("Missing connection string");
         // TODO: use DB factory instead
         builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(connectionString));
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
         builder.Services.AddHttpClient();
 
