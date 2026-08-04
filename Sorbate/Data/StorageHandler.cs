@@ -55,7 +55,8 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         
 
         record.FileName = g.ToString();
-        record.FileId = "test_id";
+        record.ModObjectId = "test_id";
+        record.IconObjectId = "test_id";
     }
 
     public async Task<bool> UploadRange(IAsyncEnumerable<ModRecord> records) {

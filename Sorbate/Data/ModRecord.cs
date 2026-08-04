@@ -23,7 +23,9 @@ public record ModRecord {
     [Required]
     public string? FileName { get; set; }
     
-    public string? FileId { get; set; } // For object storage
+    // ID of the .tmod and .png files in the object storage
+    public string? ModObjectId { get; set; }
+    public string? IconObjectId { get; set; }
     
     [Required]
     [DefaultValue(false)]
