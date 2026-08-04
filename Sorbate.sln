@@ -11,8 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tomat.FNB.TMOD", "fnb\src\T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tomat.FNB.Common", "fnb\src\Tomat.FNB.Common\Tomat.FNB.Common.csproj", "{AA826E31-A381-4365-B054-335528C8B6FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sorbate.CLI", "Sorbate.CLI\Sorbate.CLI.csproj", "{AE1F91DB-871B-4E77-B489-064AA3C4A013}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,9 +29,5 @@ Global
 		{AA826E31-A381-4365-B054-335528C8B6FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA826E31-A381-4365-B054-335528C8B6FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA826E31-A381-4365-B054-335528C8B6FA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AE1F91DB-871B-4E77-B489-064AA3C4A013}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AE1F91DB-871B-4E77-B489-064AA3C4A013}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AE1F91DB-871B-4E77-B489-064AA3C4A013}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AE1F91DB-871B-4E77-B489-064AA3C4A013}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
