@@ -94,8 +94,13 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
 
     public async Task<IList<ModRecord>> ListMods(int page, int limit) {
         await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        limit = Math.Min(limit, 100);
         
-        List<ModRecord> records = await db.ModRecords.Skip(limit * page).Take(limit).ToListAsync();
+        List<ModRecord> records = await db.ModRecords
+            .OrderByDescending(x => x.Id)
+            .Skip(limit * page)
+            .Take(limit)
+            .ToListAsync();
         return records;
     }
 
