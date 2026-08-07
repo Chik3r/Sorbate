@@ -152,14 +152,18 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
     }
     
     private static void UploadIcon(SerializableTmodFile modFile, Guid g) {
-        if (modFile.Entries.TryGetValue("icon_workshop.rawimg", out ISerializableTmodFile.FileEntry rawImageEntry) ||
-            modFile.Entries.TryGetValue("icon.rawimg", out rawImageEntry)) {
+        byte[]? icon = null;
+        if (modFile.Entries.TryGetValue("icon.png", out ISerializableTmodFile.FileEntry iconEntry)) {
+            icon = TmodExtensions.Decompress(iconEntry.Data!, iconEntry.Length);
+        }
+        else if (modFile.Entries.TryGetValue("icon.rawimg", out ISerializableTmodFile.FileEntry rawIconEntry)) {
             IFileConverter extractor = RawimgExtractor.GetRawimgExtractor();
-            byte[] rawImage = TmodExtensions.Decompress(rawImageEntry.Data!, rawImageEntry.Length);
+            byte[] rawImage = TmodExtensions.Decompress(rawIconEntry.Data!, rawIconEntry.Length);
 
             (string path, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
-            
-            // TODO: Upload mod icon
+            icon = data;
         }
+        
+        // TODO: Upload mod icon
     }
 }
