@@ -9,7 +9,7 @@ public record SteamResponseRoot(
 public record SteamResponse(
     [property: JsonPropertyName("total")] int Total,
     [property: JsonPropertyName("publishedfiledetails")]
-    IReadOnlyList<PublishedFileDetail> PublishedFileDetails,
+    IReadOnlyList<PublishedFileDetail>? PublishedFileDetails,
     [property: JsonPropertyName("next_cursor")]
     string NextCursor);
 
