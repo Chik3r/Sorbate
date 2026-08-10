@@ -14,8 +14,20 @@ public class StorageHandler : IStorage {
 
     public StorageHandler(IDbContextFactory<AppDbContext> dbFactory, IConfiguration configuration) {
         _dbFactory = dbFactory;
+
+        string? accessKey = configuration.GetValue<string>("S3Storage:AccessKey");
+        string? secretKey = configuration.GetValue<string>("S3Storage:SecretKey");
+        string? bucketName = configuration.GetValue<string>("S3Storage:BucketName");
+        string? serviceUrl = configuration.GetValue<string>("S3Storage:ServiceUrl");
+        string? region = configuration.GetValue<string>("S3Storage:Region");
+
+        if (string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey) ||
+            string.IsNullOrWhiteSpace(bucketName) || string.IsNullOrWhiteSpace(serviceUrl) ||
+            string.IsNullOrWhiteSpace(region)) {
+            throw new ArgumentException("Failed to initialize storage handler, missing values.");
+        }
         
-        _s3Store = new S3Store();
+        _s3Store = new S3Store(accessKey, secretKey, null, bucketName, region, serviceUrl);
     }
 
     public async Task<bool> Upload(ModRecord record) {
@@ -49,7 +61,7 @@ public class StorageHandler : IStorage {
         // Upload the mod and its icon, storing the file as <guid>.<extension>
         var g = Guid.CreateVersion7();
         record.FileName = g.ToString();
-        await UploadIcon(modFile, g); // Gets the mod icon from the .tmod file, and uploads it
+        await UploadIcon(record, g); // Gets the mod icon from the .tmod file, and uploads it
         await UploadMod(record, g);
 
         await UpdateRecordTimestamp(record, db);
