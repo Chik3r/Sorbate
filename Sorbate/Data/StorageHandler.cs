@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FluentStorage.AWS.Storage;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Tomat.FNB.TMOD;
 using Tomat.FNB.TMOD.Converters;
@@ -7,7 +8,16 @@ using Tomat.FNB.TMOD.Utilities;
 
 namespace Sorbate.Data;
 
-public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorage {
+public class StorageHandler : IStorage {
+    private readonly S3Store _s3Store;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+
+    public StorageHandler(IDbContextFactory<AppDbContext> dbFactory, IConfiguration configuration) {
+        _dbFactory = dbFactory;
+        
+        _s3Store = new S3Store();
+    }
+
     public async Task<bool> Upload(ModRecord record) {
         if (record.Data?.Hash is null) {
             // TODO: proper logging
@@ -17,7 +27,7 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         }
         SerializableTmodFile modFile = record.Data.Value;
         
-        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
 
         // Check if we already have a file with the same hash.
         // If so, then do not upload this file, and make sure to write down when we last updated the related published file id.
@@ -38,8 +48,9 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
 
         // Upload the mod and its icon, storing the file as <guid>.<extension>
         var g = Guid.CreateVersion7();
-        UploadIcon(modFile, g); // Gets the mod icon from the .tmod file, and uploads it
-        UploadMod(record, g);
+        record.FileName = g.ToString();
+        await UploadIcon(modFile, g); // Gets the mod icon from the .tmod file, and uploads it
+        await UploadMod(record, g);
 
         await UpdateRecordTimestamp(record, db);
         EntityEntry<ModRecord> entry = await db.AddAsync(record);
@@ -48,52 +59,38 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         return true;
     }
 
-    private static void UploadMod(ModRecord record, Guid g) {
-        // TODO: Upload mod
-        
-        // pretend we uploaded it to the object storage
-        
-
-        record.FileName = g.ToString();
-        record.ModObjectId = "test_id";
-        record.IconObjectId = "test_id";
-    }
-
     public async Task<bool> UploadRange(IAsyncEnumerable<ModRecord> records) {
         await foreach (ModRecord record in records) {
             await Upload(record);
         }
 
         return true;
-        // throw new NotImplementedException();
     }
 
     public async Task<string?> GetModDownloadLink(int id) {
-        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
         ModRecord? record = await db.ModRecords.FindAsync(id);
 
         if (record is null) return null;
-        
-        // TODO: do magic to get a presigned download link
-        // string downloadLink = Magic(record.FileId);
 
-        return $"some-url.com/{record.FileName}.tmod";
+        if (await _s3Store.ObjectExists(record.ModObjectId))
+            return await _s3Store.GetDownloadUrl(record.ModObjectId, true);
+        else return null;
     }
 
     public async Task<string?> GetIconDownloadLink(int id) {
-        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
         ModRecord? record = await db.ModRecords.FindAsync(id);
 
         if (record is null) return null;
         
-        // TODO: do magic to get a presigned download link
-        // string downloadLink = Magic(record.FileId);
-
-        return $"some-url.com/{record.FileName}.png";
+        if (await _s3Store.ObjectExists(record.IconObjectId))
+            return await _s3Store.GetDownloadUrl(record.IconObjectId, true);
+        else return null;
     }
 
     public async Task<IList<ModRecord>> ListMods(int page, int limit) {
-        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
         limit = Math.Min(limit, 100);
         
         List<ModRecord> records = await db.ModRecords
@@ -105,7 +102,7 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
     }
 
     public async Task<DateTime?> GetLastUpdateTimestamp(string fileId) {
-        await using AppDbContext db = await dbFactory.CreateDbContextAsync();
+        await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
 
         SteamUpdateRecord? record = await db.SteamUpdateRecords.FirstOrDefaultAsync(x => x.PublishedFileId == fileId);
         return record?.TimeUpdated;
@@ -151,7 +148,9 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
         }
     }
     
-    private static void UploadIcon(SerializableTmodFile modFile, Guid g) {
+    private async Task UploadIcon(ModRecord record, Guid g) {
+        SerializableTmodFile modFile = record.Data!.Value;
+        
         byte[]? icon = null;
         if (modFile.Entries.TryGetValue("icon.png", out ISerializableTmodFile.FileEntry iconEntry)) {
             icon = TmodExtensions.Decompress(iconEntry.Data!, iconEntry.Length);
@@ -160,10 +159,33 @@ public class StorageHandler(IDbContextFactory<AppDbContext> dbFactory) : IStorag
             IFileConverter extractor = RawimgExtractor.GetRawimgExtractor();
             byte[] rawImage = TmodExtensions.Decompress(rawIconEntry.Data!, rawIconEntry.Length);
 
-            (string path, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
+            (string _, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
             icon = data;
         }
+        else {
+            Console.WriteLine($"Icon not found for mod {record.InternalName}-v{record.Version}");
+            return;
+        }
         
-        // TODO: Upload mod icon
+        // Upload the mod icon
+        await using MemoryStream ms = new();
+        await ms.WriteAsync(icon);
+        
+        string fileName = Path.ChangeExtension(g.ToString(), ".png");
+        await _s3Store.SetObject(fileName, ms);
+        record.IconObjectId = fileName;
+    }
+    
+    private async Task UploadMod(ModRecord record, Guid g) {
+        SerializableTmodFile modFile = record.Data!.Value;
+        
+        // Write the mod back into the .tmod format in memory
+        await using MemoryStream ms = new();
+        modFile.Write(ms);
+        
+        // Upload the .tmod
+        string fileName = Path.ChangeExtension(g.ToString(), ".tmod");
+        await _s3Store.SetObject(fileName, ms);
+        record.ModObjectId = fileName;
     }
 }
