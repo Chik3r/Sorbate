@@ -12,7 +12,7 @@ public class SteamScraper : IScraper {
     private const string TmlAppId = "1281930";
     // Query type 21 means sort by last updated
     private const string ApiUrl =
-        $"https://api.steampowered.com/IPublishedFileService/QueryFiles/v1/?key={{0}}&query_type=21&cursor={{1}}&numperpage=3&appid={TmlAppId}&return_short_description=true";
+        $"https://api.steampowered.com/IPublishedFileService/QueryFiles/v1/?key={{0}}&query_type=21&cursor={{1}}&numperpage=50&appid={TmlAppId}&return_short_description=true";
     
     private readonly HttpClient _http;
     private readonly IStorage _storage;
@@ -113,6 +113,16 @@ public class SteamScraper : IScraper {
             }
             
             SteamResponse steamResponse = steamResponseRoot.Response;
+            if (steamResponse.PublishedFileDetails is null) {
+                // If the current cursor and next cursor match, then we have gone through all results and can ignore the null value.
+                if (steamResponse.NextCursor != cursor) {
+                    // TODO: Add logging or something
+                    Console.WriteLine($"PublishedFileDetails was null, with cursor: {cursor}");
+                }
+                
+                yield break;
+            }
+            
             foreach (PublishedFileDetail fileDetail in steamResponse.PublishedFileDetails) {
                 yield return fileDetail;
             }
@@ -133,7 +143,7 @@ public class SteamScraper : IScraper {
 
         // Only download up to sizeLimit amount of data at a time.
         // This is needed because all the downloaded data will be loaded into RAM later on.
-        const int sizeLimit = 2 * 1000 * 1000; // 2 GB
+        const int sizeLimit = 2 * 1000 * 1000 * 1000; // 2 GB
         int sumSize = 0;
         Dictionary<string, int> idToSteamTime = new();
         await foreach (PublishedFileDetail workshopItem in workshopItems.WithCancellation(token)) {
