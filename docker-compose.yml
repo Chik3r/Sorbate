@@ -11,11 +11,12 @@
     environment:
       Discord__AuthToken: ${DISCORD_TOKEN}
       ConnectionStrings__DefaultConnection: Host=db;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
-      SteamCmdPath: steamcmd/steamcmd.sh
+      Scraping__SteamCmdPath: steamcmd/steamcmd.sh
     env_file:
       - path: .env
         required: true
     volumes:
+      - tmp_files/:/app/steamcmd/write_dir/
       - steamcmd-volume:/app/steamcmd
     user: "1005:1006"
   db:
@@ -35,6 +36,7 @@
     tty: true
     stdin_open: true
     volumes:
+      - tmp_files/:/home/steam/steamcmd/write_dir/
       - steamcmd-volume:/home/steam/steamcmd
 
 volumes:
