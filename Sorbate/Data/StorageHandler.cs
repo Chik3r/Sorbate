@@ -1,4 +1,7 @@
-﻿using FluentStorage.AWS.Storage;
+﻿using Amazon;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Tomat.FNB.TMOD;
@@ -9,8 +12,9 @@ using Tomat.FNB.TMOD.Utilities;
 namespace Sorbate.Data;
 
 public class StorageHandler : IStorage {
-    private readonly S3Store _s3Store;
+    private readonly AmazonS3Client _s3Store;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly string _bucketName;
 
     public StorageHandler(IDbContextFactory<AppDbContext> dbFactory, IConfiguration configuration) {
         _dbFactory = dbFactory;
@@ -26,8 +30,15 @@ public class StorageHandler : IStorage {
             string.IsNullOrWhiteSpace(region)) {
             throw new ArgumentException("Failed to initialize storage handler, missing values.");
         }
-        
-        _s3Store = new S3Store(accessKey, secretKey, null, bucketName, region, serviceUrl);
+
+        _bucketName = bucketName;
+
+        AWSConfigsS3.UseSignatureVersion4 = false;
+        _s3Store = new AmazonS3Client(accessKey, secretKey, new AmazonS3Config() {
+            AuthenticationRegion = region,
+            ServiceURL = serviceUrl,
+            ForcePathStyle = true,
+        });
     }
 
     public async Task<bool> Upload(ModRecord record) {
@@ -83,22 +94,18 @@ public class StorageHandler : IStorage {
         await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
         ModRecord? record = await db.ModRecords.FindAsync(id);
 
-        if (record is null) return null;
+        if (record?.ModObjectId is null) return null;
 
-        if (await _s3Store.ObjectExists(record.ModObjectId))
-            return await _s3Store.GetDownloadUrl(record.ModObjectId, true);
-        else return null;
+        return await GetPresignedUrl(record.ModObjectId);
     }
 
     public async Task<string?> GetIconDownloadLink(int id) {
         await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
         ModRecord? record = await db.ModRecords.FindAsync(id);
 
-        if (record is null) return null;
+        if (record?.IconObjectId is null) return null;
         
-        if (await _s3Store.ObjectExists(record.IconObjectId))
-            return await _s3Store.GetDownloadUrl(record.IconObjectId, true);
-        else return null;
+        return await GetPresignedUrl(record.IconObjectId);
     }
 
     public async Task<IList<ModRecord>> ListMods(int page, int limit) {
@@ -174,6 +181,16 @@ public class StorageHandler : IStorage {
             (string _, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
             icon = data;
         }
+        else if (modFile.Entries.TryGetValue("icon_workshop.png", out iconEntry)) {
+            icon = TmodExtensions.Decompress(iconEntry.Data!, iconEntry.Length);
+        }
+        else if (modFile.Entries.TryGetValue("icon_workshop.rawimg", out rawIconEntry)) {
+            IFileConverter extractor = RawimgExtractor.GetRawimgExtractor();
+            byte[] rawImage = TmodExtensions.Decompress(rawIconEntry.Data!, rawIconEntry.Length);
+
+            (string _, byte[] data) = extractor.Convert("icon.rawimg", rawImage);
+            icon = data;
+        }
         else {
             Console.WriteLine($"Icon not found for mod {record.InternalName}-v{record.Version}");
             return;
@@ -184,7 +201,7 @@ public class StorageHandler : IStorage {
         await ms.WriteAsync(icon);
         
         string fileName = Path.ChangeExtension(g.ToString(), ".png");
-        await _s3Store.SetObject(fileName, ms);
+        await UploadObject(ms, fileName);
         record.IconObjectId = fileName;
     }
     
@@ -193,11 +210,31 @@ public class StorageHandler : IStorage {
         
         // Write the mod back into the .tmod format in memory
         await using MemoryStream ms = new();
-        modFile.Write(ms);
+        modFile.Write(ms, true);
         
         // Upload the .tmod
         string fileName = Path.ChangeExtension(g.ToString(), ".tmod");
-        await _s3Store.SetObject(fileName, ms);
+        await UploadObject(ms, fileName);
         record.ModObjectId = fileName;
+    }
+
+    private async Task UploadObject(Stream stream, string key) {
+        TransferUtility utility = new(_s3Store);
+        await utility.UploadAsync(stream, _bucketName, key);
+    }
+
+    private async Task<string?> GetPresignedUrl(string fileName) {
+        try {
+            GetPreSignedUrlRequest request = new() {
+                BucketName = _bucketName,
+                Key = fileName,
+                Verb = HttpVerb.GET,
+                Expires = DateTime.UtcNow.AddHours(1)
+            };
+            return await _s3Store.GetPreSignedURLAsync(request);
+        }
+        catch {
+            return null;
+        }
     }
 }
