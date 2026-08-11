@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fnb\src\Tomat.FNB\Tomat.FNB.csproj" />
+    <ProjectReference Include="..\fnb\src\Tomat.FNB.TMOD\Tomat.FNB.TMOD.csproj" />
   </ItemGroup>
 
 </Project>
