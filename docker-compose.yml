@@ -16,7 +16,7 @@
       - path: .env
         required: true
     volumes:
-      - tmp_files/:/app/steamcmd/write_dir/
+      - ./tmp_files/:/app/steamcmd/write_dir/
       - steamcmd-volume:/app/steamcmd
     user: "1005:1006"
   db:
@@ -30,14 +30,17 @@
         required: true
     ports:
       - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
   steamcmd:
     # image: cm2network/steamcmd # For x64 machines
     image: sonroyaalmerol/steamcmd-arm64 # For arm64 machines
     tty: true
     stdin_open: true
     volumes:
-      - tmp_files/:/home/steam/steamcmd/write_dir/
+      - ./tmp_files/:/home/steam/steamcmd/write_dir/
       - steamcmd-volume:/home/steam/steamcmd
 
 volumes:
   steamcmd-volume:
+  postgres-data:
