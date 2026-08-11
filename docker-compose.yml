@@ -11,13 +11,12 @@
     environment:
       Discord__AuthToken: ${DISCORD_TOKEN}
       ConnectionStrings__DefaultConnection: Host=db;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
+      SteamCmdPath: steamcmd/steamcmd.sh
     env_file:
       - path: .env
         required: true
     volumes:
-      - type: bind
-        source: /mnt/extra-storage/tmod_files/
-        target: /app/tmod_files/
+      - steamcmd-volume:/app/steamcmd
     user: "1005:1006"
   db:
     image: postgres
@@ -29,4 +28,14 @@
       - path: .env
         required: true
     ports:
-      - 5432:5432
+      - "5432:5432"
+  steamcmd:
+    # image: cm2network/steamcmd # For x64 machines
+    image: sonroyaalmerol/steamcmd-arm64 # For arm64 machines
+    tty: true
+    stdin_open: true
+    volumes:
+      - steamcmd-volume:/home/steam/steamcmd
+
+volumes:
+  steamcmd-volume:
