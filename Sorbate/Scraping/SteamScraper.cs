@@ -200,12 +200,22 @@ public class SteamScraper : IScraper {
             
             // TODO: logging (DEBUG)
             Console.WriteLine("Downloading mods from Steam");
-            ProcessStartInfo procInfo = new() {
-                Arguments = argument,
-                FileName = _steamCmdPath,
-                WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath!)),
-                // UseShellExecute = true
-            };
+            ProcessStartInfo procInfo;
+            if (OperatingSystem.IsWindows()) {
+                procInfo = new ProcessStartInfo {
+                    Arguments = argument,
+                    FileName = _steamCmdPath,
+                    WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath!)),
+                    // UseShellExecute = true
+                };
+            }
+            else {
+                procInfo = new ProcessStartInfo {
+                    FileName = "sh",
+                    Arguments = $"{Path.GetFullPath(_steamCmdPath!)} {argument}",
+                    WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath!)),
+                };
+            }
 
             Process? steamCmd = Process.Start(procInfo);
             if (steamCmd is null) {
