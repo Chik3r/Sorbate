@@ -204,16 +204,17 @@ public class SteamScraper : IScraper {
             if (OperatingSystem.IsWindows()) {
                 procInfo = new ProcessStartInfo {
                     Arguments = argument,
-                    FileName = _steamCmdPath,
+                    FileName = _steamCmdPath!,
                     WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath!)),
                     // UseShellExecute = true
                 };
             }
             else {
                 procInfo = new ProcessStartInfo {
-                    FileName = "sh",
-                    Arguments = $"{Path.GetFullPath(_steamCmdPath!)} {argument}",
+                    FileName = "bash",
+                    Arguments = $"{_steamCmdPath!} {argument}",
                     WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(_steamCmdPath!)),
+                    UseShellExecute = false,
                 };
             }
 
