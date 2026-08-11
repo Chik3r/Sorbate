@@ -1,7 +1,24 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-USER $APP_UID
-WORKDIR /app
+﻿FROM sonroyaalmerol/steamcmd-arm64:root-bookworm AS base
 
+# Install dotnet onto the image
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates libicu72 libssl3 \
+    && curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
+    && chmod +x /tmp/dotnet-install.sh \
+    && /tmp/dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet \
+    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
+    && rm -rf /var/lib/apt/lists/* /tmp/dotnet-install.sh
+
+ENV DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_NOLOGO=true \
+    ASPNETCORE_HTTP_PORTS=8080
+
+WORKDIR /app
+RUN chown steam:steam /app
+USER steam
+
+
+# Build program
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
