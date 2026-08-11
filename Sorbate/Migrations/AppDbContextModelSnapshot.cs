@@ -17,7 +17,7 @@ namespace Sorbate.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.6")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -36,9 +36,6 @@ namespace Sorbate.Migrations
                     b.Property<string>("DisplayName")
                         .HasColumnType("text");
 
-                    b.Property<string>("FileId")
-                        .HasColumnType("text");
-
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -50,12 +47,18 @@ namespace Sorbate.Migrations
                     b.Property<bool>("Hidden")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("IconObjectId")
+                        .HasColumnType("text");
+
                     b.Property<string>("InternalName")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ModLoaderVersion")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModObjectId")
                         .HasColumnType("text");
 
                     b.Property<string>("PublishedFileId")
