@@ -2,7 +2,7 @@
 
 # Install dotnet onto the image
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates libicu72 libssl3 gosu \
+        curl ca-certificates libicu72 libssl3 \
     && curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && chmod +x /tmp/dotnet-install.sh \
     && /tmp/dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet \
@@ -12,11 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_NOLOGO=true \
     ASPNETCORE_HTTP_PORTS=8080
-
-WORKDIR /app
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["docker-entrypoint.sh"]
 
 
 # Build program
@@ -35,5 +30,5 @@ RUN dotnet publish "Sorbate.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:U
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish --chown=steam:steam /app/publish .
-CMD ["dotnet", "Sorbate.dll"]
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "Sorbate.dll"]

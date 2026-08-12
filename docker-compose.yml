@@ -17,7 +17,6 @@
         required: true
     volumes:
       - ./tmp_files/:/home/steam/steamcmd/write_dir/
-    user: "1005:1006"
   db:
     image: postgres
     restart: always
