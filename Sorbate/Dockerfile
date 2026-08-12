@@ -2,7 +2,7 @@
 
 # Install dotnet onto the image
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates libicu72 libssl3 \
+        curl ca-certificates libicu-dev libssl3 \
     && curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && chmod +x /tmp/dotnet-install.sh \
     && /tmp/dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet \
