@@ -1,4 +1,4 @@
-﻿FROM sonroyaalmerol/steamcmd-arm64:root-bookworm AS base
+﻿FROM cm2network/steamcmd:root AS base
 
 # Install dotnet onto the image
 RUN apt-get update && apt-get install -y --no-install-recommends \
