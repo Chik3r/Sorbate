@@ -15,6 +15,8 @@ public class StorageHandler : IStorage {
     private readonly AmazonS3Client _s3Store;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly string _bucketName;
+    
+    private static readonly SemaphoreSlim DbSemaphore = new(1, 1);
 
     public StorageHandler(IDbContextFactory<AppDbContext> dbFactory, IConfiguration configuration) {
         _dbFactory = dbFactory;
@@ -48,38 +50,45 @@ public class StorageHandler : IStorage {
 
             return false;
         }
-        SerializableTmodFile modFile = record.Data.Value;
-        
-        await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
 
-        // Check if we already have a file with the same hash.
-        // If so, then do not upload this file, and make sure to write down when we last updated the related published file id.
-        if (await db.ModRecords.AnyAsync(x => x.Hash == modFile.Hash)) {
-            Console.WriteLine($"Mod {modFile.Name} (version {modFile.Version}) already exists, skip.");
-            
-            // TODO: do more checks on the record, filter if already uploaded etc 
+        try {
+            await DbSemaphore.WaitAsync();
+            SerializableTmodFile modFile = record.Data.Value;
+
+            await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
+
+            // Check if we already have a file with the same hash.
+            // If so, then do not upload this file, and make sure to write down when we last updated the related published file id.
+            if (await db.ModRecords.AnyAsync(x => x.Hash == modFile.Hash)) {
+                Console.WriteLine($"Mod {modFile.Name} (version {modFile.Version}) already exists, skip.");
+
+                // TODO: do more checks on the record, filter if already uploaded etc 
+
+                await UpdateRecordTimestamp(record, db);
+                await db.SaveChangesAsync();
+
+                return true;
+            }
+
+            // Read mod metadata (such as author, display name, etc.) from the .tmod file, 
+            // and write it to the ModRecord.
+            PopulateModMetadata(record, modFile);
+
+            // Upload the mod and its icon, storing the file as <guid>.<extension>
+            var g = Guid.CreateVersion7();
+            record.FileName = g.ToString();
+            await UploadIcon(record, g); // Gets the mod icon from the .tmod file, and uploads it
+            await UploadMod(record, g);
 
             await UpdateRecordTimestamp(record, db);
+            EntityEntry<ModRecord> entry = await db.AddAsync(record);
+
             await db.SaveChangesAsync();
-            
             return true;
         }
-        
-        // Read mod metadata (such as author, display name, etc.) from the .tmod file, 
-        // and write it to the ModRecord.
-        PopulateModMetadata(record, modFile);
-
-        // Upload the mod and its icon, storing the file as <guid>.<extension>
-        var g = Guid.CreateVersion7();
-        record.FileName = g.ToString();
-        await UploadIcon(record, g); // Gets the mod icon from the .tmod file, and uploads it
-        await UploadMod(record, g);
-
-        await UpdateRecordTimestamp(record, db);
-        EntityEntry<ModRecord> entry = await db.AddAsync(record);
-        
-        await db.SaveChangesAsync();
-        return true;
+        finally {
+            DbSemaphore.Release();
+        }
     }
 
     public async Task<bool> UploadRange(IAsyncEnumerable<ModRecord> records) {
