@@ -19,9 +19,8 @@ public class SteamScraper : IScraper {
     private readonly string? _steamApiKey;
     private readonly string? _steamCmdPath;
     private readonly string? _steamWriteDirectory;
+    private bool _busyHistorical = false;
     private string RealSteamWriteDirectory => Path.Combine(Path.GetDirectoryName(_steamCmdPath) ?? string.Empty, _steamWriteDirectory ?? string.Empty);
-
-    private static readonly SemaphoreSlim SteamCmdSemaphore = new(1, 1);
     
     public string SourceName => "Steam";
 
@@ -52,6 +51,10 @@ public class SteamScraper : IScraper {
     }
 
     public async Task<IAsyncEnumerable<ModRecord>> ScrapeLatest(CancellationToken token = default) {
+        if (_busyHistorical) {
+            // Console.WriteLine("Busy with historical scrape");
+            return  AsyncEnumerable.Empty<ModRecord>();
+        }
         if (!CheckValidSteamParameters()) return AsyncEnumerable.Empty<ModRecord>();
 
         IAsyncEnumerable<PublishedFileDetail> publishedFiles = ListWorkshopItems(token);
@@ -62,6 +65,7 @@ public class SteamScraper : IScraper {
     public async Task<IAsyncEnumerable<ModRecord>> ScrapeHistorical(CancellationToken token = default) {
         if (!CheckValidSteamParameters()) return AsyncEnumerable.Empty<ModRecord>();
 
+        _busyHistorical = true;
         IAsyncEnumerable<PublishedFileDetail> publishedFiles = ListWorkshopItems(token, true);
 
         return DownloadWorkshopItems(publishedFiles, token);
@@ -195,8 +199,6 @@ public class SteamScraper : IScraper {
             // Use ID to access SteamCMD and download mod
             // Command is  './steamcmd.exe +login anonymous +workshop_download_item {TmlAppId} {id} validate +quit'
             // File will be saved to './steamapps/workshop/content/{TmlAppId}/{id}/'
-
-            await SteamCmdSemaphore.WaitAsync(token);
             
             // TODO: logging (DEBUG)
             Console.WriteLine("Downloading mods from Steam");
@@ -222,7 +224,7 @@ public class SteamScraper : IScraper {
             if (steamCmd is null) {
                 // TODO: log WARN
                 Console.WriteLine("Failed to start SteamCMD");
-                SteamCmdSemaphore.Release();
+                _busyHistorical = false;
                 yield break;
             }
             
@@ -232,9 +234,10 @@ public class SteamScraper : IScraper {
             foreach (ModRecord record in downloadedFiles) {
                 yield return record;
             }
-
-            SteamCmdSemaphore.Release();
         }
+
+        if (_busyHistorical)
+            _busyHistorical = false;
     }
     
     private async Task<List<ModRecord>> ListDownloadedFiles(Dictionary<string, int> fileIdTimestampMapping) {
