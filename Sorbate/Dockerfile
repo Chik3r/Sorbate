@@ -30,5 +30,6 @@ RUN dotnet publish "Sorbate.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:U
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=publish --chown=steam:steam /app/publish .
+USER steam
 ENTRYPOINT ["dotnet", "Sorbate.dll"]
