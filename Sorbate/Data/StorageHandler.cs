@@ -143,8 +143,8 @@ public class StorageHandler : IStorage {
             byte[] data = TmodExtensions.Decompress(info.Data!, info.Length);
             Dictionary<string, string?> convertedInfo = InfoDictExtractor.Convert(data);
 
-            displayName = convertedInfo["displayName"];
-            author = convertedInfo["author"];
+            displayName = convertedInfo.GetValueOrDefault("displayName");
+            author = convertedInfo.GetValueOrDefault("author");
 
             if (string.IsNullOrWhiteSpace(displayName))
                 displayName = null;
