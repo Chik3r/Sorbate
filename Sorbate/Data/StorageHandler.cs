@@ -14,12 +14,14 @@ namespace Sorbate.Data;
 public class StorageHandler : IStorage {
     private readonly AmazonS3Client _s3Store;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly ILogger<StorageHandler> _logger;
     private readonly string _bucketName;
     
     private static readonly SemaphoreSlim DbSemaphore = new(1, 1);
 
-    public StorageHandler(IDbContextFactory<AppDbContext> dbFactory, IConfiguration configuration) {
+    public StorageHandler(IDbContextFactory<AppDbContext> dbFactory, IConfiguration configuration, ILogger<StorageHandler> logger) {
         _dbFactory = dbFactory;
+        _logger = logger;
 
         string? accessKey = configuration.GetValue<string>("S3Storage:AccessKey");
         string? secretKey = configuration.GetValue<string>("S3Storage:SecretKey");
@@ -46,8 +48,7 @@ public class StorageHandler : IStorage {
     public async Task<bool> Upload(ModRecord record) {
         if (record.Data?.Hash is null) {
             // TODO: proper logging
-            Console.WriteLine("Either data or hash is null, uh oh");
-
+            _logger.LogWarning("ModRecord with null data or hash value, {id}", record.PublishedFileId);
             return false;
         }
 
@@ -60,9 +61,7 @@ public class StorageHandler : IStorage {
             // Check if we already have a file with the same hash.
             // If so, then do not upload this file, and make sure to write down when we last updated the related published file id.
             if (await db.ModRecords.AnyAsync(x => x.Hash == modFile.Hash)) {
-                Console.WriteLine($"Mod {modFile.Name} (version {modFile.Version}) already exists, skip.");
-
-                // TODO: do more checks on the record, filter if already uploaded etc 
+                _logger.LogInformation("Mod {modName} (version {modVersion}) already exists in the database, skipping.", modFile.Name, modFile.Version);
 
                 await UpdateRecordTimestamp(record, db);
                 await db.SaveChangesAsync();
@@ -201,7 +200,7 @@ public class StorageHandler : IStorage {
             icon = data;
         }
         else {
-            Console.WriteLine($"Icon not found for mod {record.InternalName}-v{record.Version}");
+            _logger.LogInformation("Icon not found for mod {modName}-v{modVersion}", record.InternalName, record.Version);
             return;
         }
         
