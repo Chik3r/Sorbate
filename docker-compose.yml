@@ -11,14 +11,11 @@
     environment:
       Discord__AuthToken: ${DISCORD_TOKEN}
       ConnectionStrings__DefaultConnection: Host=db;Database=postgres;Username=postgres;Password=${DB_PASSWORD}
+      Scraping__SteamCmdPath: /home/steam/steamcmd/steamcmd.sh
+      Scraping__SteamWriteDirectory: linux32/
     env_file:
       - path: .env
         required: true
-    volumes:
-      - type: bind
-        source: /mnt/extra-storage/tmod_files/
-        target: /app/tmod_files/
-    user: "1005:1006"
   db:
     image: postgres
     restart: always
@@ -29,4 +26,9 @@
       - path: .env
         required: true
     ports:
-      - 5432:5432
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+volumes:
+  postgres-data:

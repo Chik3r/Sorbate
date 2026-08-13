@@ -1,8 +1,21 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-USER $APP_UID
-WORKDIR /app
+﻿FROM cm2network/steamcmd:root AS base
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# Install dotnet onto the image
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates libicu-dev libssl3 \
+    && curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
+    && chmod +x /tmp/dotnet-install.sh \
+    && /tmp/dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet \
+    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet \
+    && rm -rf /var/lib/apt/lists/* /tmp/dotnet-install.sh
+
+ENV DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_NOLOGO=true \
+    ASPNETCORE_HTTP_PORTS=8080
+
+
+# Build program
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Sorbate/Sorbate.csproj", "Sorbate/"]
@@ -17,5 +30,6 @@ RUN dotnet publish "Sorbate.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:U
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=publish --chown=steam:steam /app/publish .
+USER steam
 ENTRYPOINT ["dotnet", "Sorbate.dll"]
