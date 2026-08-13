@@ -256,6 +256,8 @@ public class SteamScraper : IScraper {
             SerializableTmodFile tmod = SerializableTmodFile.FromStream(fs);
 
             string workshopId = Directory.GetParent(tmodFile)!.Parent!.Name;
+            if (workshopId == TmlAppId) workshopId = Directory.GetParent(tmodFile)!.Name; // For really old mods on workshop
+            
             if (!fileIdTimestampMapping.TryGetValue(workshopId, out int timestamp)) {
                 // TODO: log warn or something, this would be caused if files were not deleted after downloading them
                 Console.WriteLine("Failed to find timestamp for {0}", workshopId);
