@@ -16,8 +16,6 @@
     env_file:
       - path: .env
         required: true
-    volumes:
-      - steamcmd-steam:/home/steam/steamcmd/linux32/steamapps/
   db:
     image: postgres
     restart: always
@@ -34,4 +32,3 @@
 
 volumes:
   postgres-data:
-  steamcmd-steam:
