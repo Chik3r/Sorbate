@@ -195,7 +195,8 @@ public class SteamScraper : IScraper {
 
             await SteamCmdSemaphore.WaitAsync(token);
             
-            _logger.LogDebug("Downloading mods from Steam using SteamCMD");
+            _logger.LogInformation("Downloading mods from Steam using SteamCMD");
+            _logger.LogDebug("SteamCMD argument: {argument}", argument);
             ProcessStartInfo procInfo;
             if (OperatingSystem.IsWindows()) {
                 procInfo = new ProcessStartInfo {
