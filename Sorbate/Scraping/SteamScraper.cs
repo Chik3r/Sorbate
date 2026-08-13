@@ -174,7 +174,7 @@ public class SteamScraper : IScraper {
             }
 
             sumSize += fileSize;
-            argBuilder.Append($" +workshop_download_item {TmlAppId} {id} validate");
+            argBuilder.Append($" +download_item {TmlAppId} {id} validate");
             idToSteamTime.Add(id, workshopItem.TimeUpdated);
         }
 
@@ -195,6 +195,8 @@ public class SteamScraper : IScraper {
             // Use ID to access SteamCMD and download mod
             // Command is  './steamcmd.exe +login anonymous +workshop_download_item {TmlAppId} {id} validate +quit'
             // File will be saved to './steamapps/workshop/content/{TmlAppId}/{id}/'
+            // Note: Use download_item instead of workshop_download_item so that we avoid the workshop system.
+            // Otherwise, steam will try to redownload old deleted files later, causing issues.
 
             await SteamCmdSemaphore.WaitAsync(token);
             
@@ -239,7 +241,7 @@ public class SteamScraper : IScraper {
     
     private async Task<List<ModRecord>> ListDownloadedFiles(Dictionary<string, int> fileIdTimestampMapping) {
         // Find the .tmod file
-        string searchFolder = Path.Combine(RealSteamWriteDirectory, "steamapps/workshop/content", $"{TmlAppId}");
+        string searchFolder = Path.Combine(RealSteamWriteDirectory, "steamapps/content", $"app_{TmlAppId}");
         if (!Directory.Exists(searchFolder)) {
             // TODO: warn
             Console.WriteLine("Failed to find download directory {0}", searchFolder);
@@ -255,8 +257,11 @@ public class SteamScraper : IScraper {
             await using FileStream fs = File.OpenRead(tmodFile);
             SerializableTmodFile tmod = SerializableTmodFile.FromStream(fs);
 
-            string workshopId = Directory.GetParent(tmodFile)!.Parent!.Name;
-            if (workshopId == TmlAppId) workshopId = Directory.GetParent(tmodFile)!.Name; // For really old mods on workshop
+            // Folder name should be item_<id>, we try to get the <id> part
+            string workshopId = Directory.GetParent(tmodFile)!.Parent!.Name.Split('_').ElementAtOrDefault(1) ?? TmlAppId;
+            // For really old mods on workshop
+            if (workshopId == TmlAppId) 
+                workshopId = Directory.GetParent(tmodFile)!.Name.Split('_').ElementAtOrDefault(1) ?? "null"; 
             
             if (!fileIdTimestampMapping.TryGetValue(workshopId, out int timestamp)) {
                 // TODO: log warn or something, this would be caused if files were not deleted after downloading them
