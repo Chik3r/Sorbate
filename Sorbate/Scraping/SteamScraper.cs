@@ -284,7 +284,7 @@ public class SteamScraper : IScraper {
         }
 
         // Delete files after we have read them, as they should be loaded in memory        
-        Directory.Delete(Path.Combine(RealSteamWriteDirectory, "steamapps/workshop/content"), true);
+        Directory.Delete(Path.Combine(RealSteamWriteDirectory, "steamapps/content"), true);
 
         return modRecords;
     }
