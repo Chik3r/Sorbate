@@ -166,7 +166,7 @@ public class SteamScraper : IScraper {
             if ((sumSize != 0 && (sumSize + fileSize) >= sizeLimit) || idToSteamTime.Count >= 20) {
                 // Over the size limit, fetch the current queue
                 argBuilder.Append(suffixArgument);
-                yield return (argBuilder.ToString(), idToSteamTime);
+                yield return (argBuilder.ToString(), new Dictionary<string, int>(idToSteamTime));
                 sumSize = 0;
                 argBuilder.Clear();
                 argBuilder.Append(prefixArgument);
@@ -261,6 +261,7 @@ public class SteamScraper : IScraper {
             if (!fileIdTimestampMapping.TryGetValue(workshopId, out int timestamp)) {
                 // TODO: log warn or something, this would be caused if files were not deleted after downloading them
                 Console.WriteLine("Failed to find timestamp for {0}", workshopId);
+                Console.WriteLine("debug: description of fileid mapping --- {0}", string.Join(" | ", fileIdTimestampMapping));
             }
 
             ModRecord record = new() {
