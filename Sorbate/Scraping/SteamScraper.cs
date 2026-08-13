@@ -174,7 +174,7 @@ public class SteamScraper : IScraper {
             }
 
             sumSize += fileSize;
-            argBuilder.Append($" +download_item {TmlAppId} {id} validate");
+            argBuilder.Append($" +download_item {TmlAppId} {id}");
             idToSteamTime.Add(id, workshopItem.TimeUpdated);
         }
 
@@ -197,6 +197,7 @@ public class SteamScraper : IScraper {
             // File will be saved to './steamapps/workshop/content/{TmlAppId}/{id}/'
             // Note: Use download_item instead of workshop_download_item so that we avoid the workshop system.
             // Otherwise, steam will try to redownload old deleted files later, causing issues.
+            // extra note, validate isn't an option for download_item
 
             await SteamCmdSemaphore.WaitAsync(token);
             
