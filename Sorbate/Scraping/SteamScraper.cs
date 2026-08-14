@@ -150,7 +150,7 @@ public class SteamScraper : IScraper {
             
             // Skip files that are already in storage
             if (await _storage.GetLastUpdateTimestamp(id) == SteamTimeToDateTime(workshopItem.TimeUpdated)) {
-                _logger.LogInformation("Skipping mod {id}, already in storage.", id);
+                _logger.LogTrace("Skipping mod {id}, already in storage.", id);
                 continue;
             }
 
