@@ -238,7 +238,7 @@ public class SteamScraper : IScraper {
     
     private async Task<List<ModRecord>> ListDownloadedFiles(Dictionary<string, int> fileIdTimestampMapping) {
         // Find the .tmod file
-        string searchFolder = Path.Combine(RealSteamWriteDirectory, "steamapps/workshop/content", $"app_{TmlAppId}");
+        string searchFolder = Path.Combine(RealSteamWriteDirectory, "steamapps/workshop/content", $"{TmlAppId}");
         if (!Directory.Exists(searchFolder)) {
             _logger.LogError("Failed to find download directory {directory}", searchFolder);
             return [];
@@ -254,10 +254,10 @@ public class SteamScraper : IScraper {
             SerializableTmodFile tmod = SerializableTmodFile.FromStream(fs);
 
             // Folder name should be item_<id>, we try to get the <id> part
-            string workshopId = Directory.GetParent(tmodFile)!.Parent!.Name.Split('_').ElementAtOrDefault(1) ?? TmlAppId;
+            string workshopId = Directory.GetParent(tmodFile)!.Parent!.Name;
             // For really old mods on workshop
             if (workshopId == TmlAppId) 
-                workshopId = Directory.GetParent(tmodFile)!.Name.Split('_').ElementAtOrDefault(1) ?? "null"; 
+                workshopId = Directory.GetParent(tmodFile)!.Name; 
             
             if (!fileIdTimestampMapping.TryGetValue(workshopId, out int timestamp)) {
                 // TODO: log warn or something, this would be caused if files were not deleted after downloading them
