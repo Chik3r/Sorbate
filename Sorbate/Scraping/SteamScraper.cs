@@ -168,7 +168,7 @@ public class SteamScraper : IScraper {
             }
 
             sumSize += fileSize;
-            argBuilder.Append($" +download_item {TmlAppId} {id}");
+            argBuilder.Append($" +workshop_download_item {TmlAppId} {id} validate");
             idToSteamTime.Add(id, workshopItem.TimeUpdated);
         }
 
@@ -192,6 +192,9 @@ public class SteamScraper : IScraper {
             // Note: Use download_item instead of workshop_download_item so that we avoid the workshop system.
             // Otherwise, steam will try to redownload old deleted files later, causing issues.
             // extra note, validate isn't an option for download_item
+            // Note 2: download_item fails for some items with the message "Depot download failed : workshop item not found (Missing configuration)"
+            // We will go back to workshop_download_item, and delete the /workshop/ folder every time in hopes that the workshop cache is deleted
+            // Ideally this will prevent the issues we had with workshop_download_item 
 
             await SteamCmdSemaphore.WaitAsync(token);
             
@@ -235,7 +238,7 @@ public class SteamScraper : IScraper {
     
     private async Task<List<ModRecord>> ListDownloadedFiles(Dictionary<string, int> fileIdTimestampMapping) {
         // Find the .tmod file
-        string searchFolder = Path.Combine(RealSteamWriteDirectory, "steamapps/content", $"app_{TmlAppId}");
+        string searchFolder = Path.Combine(RealSteamWriteDirectory, "steamapps/workshop/content", $"app_{TmlAppId}");
         if (!Directory.Exists(searchFolder)) {
             _logger.LogError("Failed to find download directory {directory}", searchFolder);
             return [];
@@ -276,7 +279,7 @@ public class SteamScraper : IScraper {
         }
 
         // Delete files after we have read them, as they should be loaded in memory        
-        Directory.Delete(Path.Combine(RealSteamWriteDirectory, "steamapps/content"), true);
+        Directory.Delete(Path.Combine(RealSteamWriteDirectory, "steamapps/workshop"), true);
 
         return modRecords;
     }
