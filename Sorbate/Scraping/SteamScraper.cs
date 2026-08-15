@@ -92,7 +92,24 @@ public class SteamScraper : IScraper {
             string api = string.Format(ApiUrl, _steamApiKey, cursor);
             
             // Make request to API
-            HttpResponseMessage response = await _http.GetAsync(api, token);
+            HttpResponseMessage? response;
+
+            try {
+                response = await _http.GetAsync(api, token);
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException) {
+                _logger.LogError("Steam API timed out!");
+                yield break;
+            }
+            catch (TaskCanceledException ex) {
+                _logger.LogWarning("Scraping was cancelled while GET-ing the Steam API");
+                yield break;
+            }
+            catch (Exception ex) {
+                _logger.LogError("Unknown exception while trying to GET the Steam API. Message: {message}", ex.Message);
+                yield break;
+            }
+            
             if (!response.IsSuccessStatusCode) {
                 _logger.LogWarning("Steam API did not succeed, status code: {StatusCode}", response.StatusCode);
                 _logger.LogDebug("API request used url: {ApiUrl}", api.Replace(_steamApiKey!, "<key>"));
