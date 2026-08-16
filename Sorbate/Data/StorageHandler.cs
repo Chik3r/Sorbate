@@ -121,6 +121,7 @@ public class StorageHandler : IStorage {
         limit = Math.Min(limit, 100);
         
         List<ModRecord> records = await db.ModRecords
+            .Where(x => !x.Hidden)
             .OrderByDescending(x => x.Id)
             .Skip(limit * page)
             .Take(limit)
