@@ -116,16 +116,24 @@ public class StorageHandler : IStorage {
         return await GetPresignedUrl(record.IconObjectId);
     }
 
-    public async Task<IList<ModRecord>> ListMods(int page, int limit) {
+    public async Task<IList<ModRecord>> ListMods(int page, int limit, string? name = null, string? author = null, string? version = null) {
         await using AppDbContext db = await _dbFactory.CreateDbContextAsync();
         limit = Math.Min(limit, 100);
         
-        List<ModRecord> records = await db.ModRecords
-            .Where(x => !x.Hidden)
+        IQueryable<ModRecord> query = db.ModRecords
+            .Where(x => !x.Hidden);
+        if (!string.IsNullOrWhiteSpace(name))
+            query = query.Where(x => EF.Functions.Like(x.DisplayName, $"%{name}%") || EF.Functions.Like(x.InternalName, $"%{name}%"));
+        if (!string.IsNullOrWhiteSpace(author))
+            query = query.Where(x => EF.Functions.Like(x.Author, $"%{author}%"));
+        if (!string.IsNullOrWhiteSpace(version))
+            query = query.Where(x => EF.Functions.Like(x.Version, $"%{version}%") || EF.Functions.Like(x.ModLoaderVersion, $"%{version}%"));
+        List<ModRecord> records = await query
             .OrderByDescending(x => x.Id)
             .Skip(limit * page)
             .Take(limit)
             .ToListAsync();
+        
         return records;
     }
 
