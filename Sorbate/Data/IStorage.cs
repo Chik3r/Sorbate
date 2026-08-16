@@ -9,7 +9,7 @@ public interface IStorage {
 
     public Task<string?> GetIconDownloadLink(int id);
     
-    public Task<IList<ModRecord>> ListMods(int page, int limit);
+    public Task<IList<ModRecord>> ListMods(int page, int limit, string? name = null, string? author = null, string? version = null);
 
     public Task<DateTime?> GetLastUpdateTimestamp(string fileId);
 
