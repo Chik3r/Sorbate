@@ -1,5 +1,12 @@
 import Image from "next/image";
+import ModList from "@/app/ui/mod-list";
 
 export default function Home() {
-  return <p>Hello World!</p>;
+  return (
+    <div>
+      <main>
+        <ModList />
+      </main>
+    </div>
+  );
 }
