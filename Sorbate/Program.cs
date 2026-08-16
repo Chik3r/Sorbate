@@ -8,6 +8,8 @@ namespace Sorbate;
 class Program {
     private static async Task Main(string[] args) {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.AddCors();
         
         string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                                   throw new Exception("Missing connection string");
@@ -32,7 +34,8 @@ class Program {
         // using IServiceScope scope = app.Services.CreateScope();
         // AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         // await db.Database.MigrateAsync();
-        
+
+        app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://127.0.0.1:5173"));
         app.MapControllers();
         
         await app.RunAsync();
